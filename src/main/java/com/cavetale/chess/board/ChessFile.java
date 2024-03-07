@@ -1,0 +1,21 @@
+package com.cavetale.chess.board;
+
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
+public enum ChessFile {
+    FILE_A('a'),
+    FILE_B('b'),
+    FILE_C('c'),
+    FILE_D('d'),
+    FILE_E('e'),
+    FILE_F('f'),
+    FILE_G('g'),
+    FILE_H('h');
+
+    public final char letter;
+
+    public static ChessFile get(int x) {
+        return values()[x];
+    }
+}

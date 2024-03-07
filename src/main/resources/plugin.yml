@@ -1,0 +1,27 @@
+main: com.cavetale.chess.ChessPlugin
+name: Chess
+
+version: ${version}
+api-version: '1.20'
+
+author: StarTux
+website: https://github.com/StarTux/Chess
+description: Chess Plugin
+
+depend: [Core]
+softdepend: []
+
+commands:
+
+  chess:
+    aliases: []
+    description: Chess Command
+    permission: chess.chess
+    usage: |-
+      /chess
+
+permissions:
+
+  chess.chess:
+    description: Use /chess
+    default: op
