@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -31,6 +32,7 @@ public final class Main {
         final BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
         while (true) {
             final var legalMoves = board.getLegalMoves();
+            final var moveTexts = board.getMoveTexts(legalMoves);
             System.out.println(board.toAsciiBoard());
             if (legalMoves.isEmpty()) {
                 if (board.isKingInCheck()) {
@@ -46,6 +48,7 @@ public final class Main {
                 // Player
                 while (true) {
                     String line = stdin.readLine();
+                    if (line.isEmpty()) continue;
                     if (line.equals("fen")) {
                         System.out.println(board.toFenString());
                         continue;
@@ -53,25 +56,43 @@ public final class Main {
                         System.out.println(board.toAsciiBoard());
                         continue;
                     } else if (line.equals("moves")) {
-                        System.out.println(List.copyOf(legalMoves.keySet()));
+                        final var moves = new ArrayList<>(moveTexts.keySet());
+                        Collections.sort(moves);
+                        System.out.println(moves.size() + " " + moves);
                         continue;
                     }
-                    final ChessMove move = ChessMove.fromString(line);
-                    if (move != null && legalMoves.containsKey(move)) {
+                    ChessMove move = moveTexts.get(line);
+                    if (move != null) {
                         move(move);
                         break;
                     }
-                    final List<String> output = new ArrayList<>();
-                    for (ChessMove it : legalMoves.keySet()) {
-                        if (it.toString().startsWith(line)) {
-                            output.add(it.toString());
+                    // Try partial commands
+                    if (line.length() >= 2) {
+                        for (var entry : moveTexts.entrySet()) {
+                            if (!entry.getKey().startsWith(line)) continue;
+                            if (move != null) {
+                                move = null;
+                                break;
+                            }
+                            move = entry.getValue();
+                        }
+                        if (move != null) {
+                            move(move);
+                            break;
                         }
                     }
-                    if (!output.isEmpty()) {
-                        System.out.println(output);
-                        continue;
+                    // Guess options
+                    final var options = new ArrayList<String>();
+                    for (var entry : moveTexts.entrySet()) {
+                        if (!entry.getKey().contains(line)) continue;
+                        options.add(entry.getKey());
                     }
-                    System.err.println("Invalid command: " + line);
+                    if (!options.isEmpty()) {
+                        Collections.sort(options);
+                        System.out.println(options.size() + " " + options);
+                    } else {
+                        System.err.println("Invalid command: " + line);
+                    }
                 }
             } else {
                 List<ChessMove> list = List.copyOf(legalMoves.keySet());
@@ -82,13 +103,23 @@ public final class Main {
     }
 
     private void move(ChessMove move) {
-        System.out.println(board.getActiveColor().getHumanName()
-                           + " moves " + board.getPieceAt(move.from()).getType().getHumanName()
+        final var piece = board.getPieceAt(move.from());
+        final var taken = board.getPieceAt(move.to());
+        final var color = board.getActiveColor();
+        board.move(move);
+        System.out.println(color.getHumanName()
+                           + " moves " + piece.getType().getHumanName()
                            + " from " + move.from().getName()
                            + " to " + move.to().getName()
+                           + (taken != null
+                              ? " and takes " + taken.getType().getHumanName()
+                              : "")
                            + (move.promotion() != null
                               ? " and promotes to " + move.promotion().getHumanName()
+                              : "")
+                           + "."
+                           + (board.isKingInCheck()
+                              ? " Check!"
                               : ""));
-        board.move(move);
     }
 }

@@ -1,9 +1,7 @@
 package com.cavetale.chess.board;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Data;
@@ -161,6 +159,32 @@ public final class ChessBoard {
             : ChessColor.WHITE;
     }
 
+    public Map<String, ChessMove> getMoveTexts(Map<ChessMove, ChessBoard> legalMoves) {
+        final var result = new HashMap<String, ChessMove>();
+        for (ChessMove newMove : legalMoves.keySet()) {
+            final ChessBoard newBoard = legalMoves.get(newMove);
+            String newText = getSimpleMoveText(newMove, newBoard, false, false);
+            final ChessMove oldMove = result.remove(newText);
+            if (oldMove != null) {
+                final ChessBoard oldBoard = legalMoves.get(oldMove);
+                String oldText;
+                oldText = getSimpleMoveText(oldMove, oldBoard, true, false);
+                newText = getSimpleMoveText(newMove, newBoard, true, false);
+                if (oldText.equals(newText)) {
+                    oldText = getSimpleMoveText(oldMove, oldBoard, false, true);
+                    newText = getSimpleMoveText(newMove, newBoard, false, true);
+                    if (oldText.equals(newText)) {
+                        oldText = getSimpleMoveText(oldMove, oldBoard, true, true);
+                        newText = getSimpleMoveText(newMove, newBoard, true, true);
+                    }
+                }
+                result.put(oldText, oldMove);
+            }
+            result.put(newText, newMove);
+        }
+        return result;
+    }
+
     public boolean isKingInCheck(ChessColor color) {
         for (int y = 0; y < 8; y += 1) {
             for (int x = 0; x < 8; x += 1) {
@@ -186,26 +210,37 @@ public final class ChessBoard {
             if (piece == null || piece.color != activeColor) continue;
             switch (piece.type) {
             case PAWN: {
+                final List<ChessSquare> pawnMoves = new ArrayList<>();
                 // Forward once
                 final var forward = ifOnBoardAndEmpty(from.x, from.y + pawnDirection);
                 if (forward != null) {
-                    list.add(new ChessMove(from, forward));
+                    pawnMoves.add(forward);
                     // Forward twice
                     if (from.rank == getNaturalPawnRank()) {
                         final var passer = ifOnBoardAndEmpty(from.x, from.y + pawnDirection * 2);
-                        if (passer != null) list.add(new ChessMove(from, passer));
+                        if (passer != null) pawnMoves.add(passer);
                     }
                 }
                 // Diagonal
                 final var takeLeft = ifOnBoardAndEnemy(from.x - 1, from.y + pawnDirection);
-                if (takeLeft != null) list.add(new ChessMove(from, takeLeft));
+                if (takeLeft != null) pawnMoves.add(takeLeft);
                 final var takeRight = ifOnBoardAndEnemy(from.x + 1, from.y + pawnDirection);
-                if (takeRight != null) list.add(new ChessMove(from, takeRight));
+                if (takeRight != null) pawnMoves.add(takeRight);
                 // En passant
                 if (enPassantSquare != null
                     && (from.x + 1 == enPassantSquare.x || from.x - 1 == enPassantSquare.x)
                     && (from.y + pawnDirection == enPassantSquare.y)) {
-                    list.add(new ChessMove(from, enPassantSquare));
+                    pawnMoves.add(enPassantSquare);
+                }
+                // Pawn promotion
+                for (ChessSquare to : pawnMoves) {
+                    if (to.rank == getPromotionRank()) {
+                        for (ChessPieceType promotion : PROMOTION_PIECES) {
+                            list.add(new ChessMove(from, to, promotion));
+                        }
+                    } else {
+                        list.add(new ChessMove(from, to));
+                    }
                 }
                 break;
             }
@@ -344,26 +379,13 @@ public final class ChessBoard {
             default: break;
             }
         }
-        Collections.sort(list, Comparator.comparing(ChessMove::toString));
         // Confirm if each move is legal
-        final var result = new LinkedHashMap<ChessMove, ChessBoard>();
+        final var result = new HashMap<ChessMove, ChessBoard>();
         for (ChessMove move : list) {
-            final ChessPiece piece = getPieceAt(move.from());
-            if (piece.type == ChessPieceType.PAWN && move.to().getRank() == getPromotionRank()) {
-                // Special case: Pawn promotion
-                for (ChessPieceType promotion : List.of(ChessPieceType.QUEEN, ChessPieceType.ROOK, ChessPieceType.BISHOP, ChessPieceType.KNIGHT)) {
-                    final ChessMove move2 = new ChessMove(move.from(), move.to(), promotion);
-                    final ChessBoard nextBoard = clone();
-                    nextBoard.move(move2);
-                    if (nextBoard.isKingInCheck(activeColor)) continue;
-                    result.put(move2, nextBoard);
-                }
-            } else {
-                final ChessBoard nextBoard = clone();
-                nextBoard.move(move);
-                if (nextBoard.isKingInCheck(activeColor)) continue;
-                result.put(move, nextBoard);
-            }
+            final ChessBoard nextBoard = clone();
+            nextBoard.move(move);
+            if (nextBoard.isKingInCheck(activeColor)) continue;
+            result.put(move, nextBoard);
         }
         return result;
     }
@@ -722,4 +744,37 @@ public final class ChessBoard {
                                                           new Vec2i(-1, 0),
                                                           new Vec2i(-1, 1),
                                                           new Vec2i(0, 1));
+
+    private static final List<ChessPieceType> PROMOTION_PIECES = List.of(ChessPieceType.QUEEN,
+                                                                         ChessPieceType.ROOK,
+                                                                         ChessPieceType.BISHOP,
+                                                                         ChessPieceType.KNIGHT);
+
+    private String getSimpleMoveText(ChessMove move, ChessBoard nextBoard, boolean withOriginFile, boolean withOriginRank) {
+        final ChessPiece piece = getPieceAt(move.from());
+        final ChessPiece taken = getPieceAt(move.to());
+        final var sb = new StringBuilder();
+        if (piece.type != ChessPieceType.PAWN) {
+            sb.append(piece.type.letter);
+        }
+        if (withOriginFile || (piece.type == ChessPieceType.PAWN && taken != null)) {
+            sb.append(move.from().getFile().getLetter());
+        }
+        if (withOriginRank) {
+            sb.append(move.from().getRank().getDigit());
+        }
+        if (taken != null) {
+            sb.append('x');
+        }
+        sb.append(move.to().getFile().getLetter());
+        sb.append(move.to().getRank().getDigit());
+        if (move.promotion() != null) {
+            sb.append('=');
+            sb.append(move.promotion().getLetter());
+        }
+        if (nextBoard.isKingInCheck()) {
+            sb.append('+');
+        }
+        return sb.toString();
+    }
 }

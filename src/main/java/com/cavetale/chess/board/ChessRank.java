@@ -1,7 +1,9 @@
 package com.cavetale.chess.board;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+@Getter
 @RequiredArgsConstructor
 public enum ChessRank {
     RANK_1('1'),

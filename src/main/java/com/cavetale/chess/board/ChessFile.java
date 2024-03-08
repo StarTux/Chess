@@ -1,7 +1,9 @@
 package com.cavetale.chess.board;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+@Getter
 @RequiredArgsConstructor
 public enum ChessFile {
     FILE_A('a'),
