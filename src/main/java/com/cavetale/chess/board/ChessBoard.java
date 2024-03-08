@@ -1,6 +1,7 @@
 package com.cavetale.chess.board;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,7 @@ public final class ChessBoard {
     private boolean blackCanCastleQueenside;
     private ChessSquare enPassantSquare;
     private int halfMoveClock;
-    private int fullMoveClock;
+    private int fullMoveClock = 1;
 
     public static final String FEN_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -71,15 +72,19 @@ public final class ChessBoard {
     }
 
     public boolean canCastleKingside() {
-        return activeColor == ChessColor.WHITE
-            ? whiteCanCastleKingside
-            : blackCanCastleKingside;
+        if (!(activeColor == ChessColor.WHITE ? whiteCanCastleKingside : blackCanCastleKingside)) return false;
+        final var king = getNaturalKing();
+        return !isInCheck(king)
+            && !isInCheck(king.relative(1, 0)) && isEmpty(king.relative(1, 0))
+            && !isInCheck(king.relative(2, 0)) && isEmpty(king.relative(2, 0));
     }
 
     public boolean canCastleQueenside() {
-        return activeColor == ChessColor.WHITE
-            ? whiteCanCastleQueenside
-            : blackCanCastleQueenside;
+        if (!(activeColor == ChessColor.WHITE ? whiteCanCastleQueenside : blackCanCastleQueenside)) return false;
+        final var king = getNaturalKing();
+        return !isInCheck(king)
+            && !isInCheck(king.relative(-1, 0)) && isEmpty(king.relative(-1, 0))
+            && !isInCheck(king.relative(-2, 0)) && isEmpty(king.relative(-2, 0));
     }
 
     public void setCanCastleKingside(boolean value) {
@@ -118,22 +123,25 @@ public final class ChessBoard {
         if (piece.color != activeColor) {
             throw new IllegalArgumentException(piece + " at " + from + " does not belong to " + activeColor);
         }
+        final boolean doCastleKingside = piece.type == ChessPieceType.KING && from == getNaturalKing() && to == getKingsideCastle() && canCastleKingside();
+        final boolean doCastleQueenside = piece.type == ChessPieceType.KING && from == getNaturalKing() && to == getQueensideCastle() && canCastleQueenside();
         // Move
         moveHelper(from, to);
         if (promotion != null) {
             setPieceAt(to, ChessPiece.of(activeColor, promotion));
         }
         // En passant detection
-        if (piece.type == ChessPieceType.PAWN && from.x == to.x && to.y - from.y == getPawnDirection() * 2) {
-            enPassantSquare = to;
+        final int pawnDirection = getPawnDirection();
+        if (piece.type == ChessPieceType.PAWN && from.x == to.x && to.y + pawnDirection + pawnDirection == from.y) {
+            enPassantSquare = from.relative(0, pawnDirection);
         } else {
             enPassantSquare = null;
         }
         // Castle detection
-        if (piece.type == ChessPieceType.KING && from == getNaturalKing() && to == getKingsideCastle() && canCastleKingside()) {
+        if (doCastleKingside) {
             moveHelper(getNaturalKingsideRook(), to.relative(-1, 0));
         }
-        if (piece.type == ChessPieceType.KING && from == getNaturalKing() && to == getQueensideCastle() && canCastleQueenside()) {
+        if (doCastleQueenside) {
             moveHelper(getNaturalQueensideRook(), to.relative(1, 0));
         }
         // Update castle flags
@@ -157,32 +165,6 @@ public final class ChessBoard {
         activeColor = activeColor == ChessColor.WHITE
             ? ChessColor.BLACK
             : ChessColor.WHITE;
-    }
-
-    public Map<String, ChessMove> getMoveTexts(Map<ChessMove, ChessBoard> legalMoves) {
-        final var result = new HashMap<String, ChessMove>();
-        for (ChessMove newMove : legalMoves.keySet()) {
-            final ChessBoard newBoard = legalMoves.get(newMove);
-            String newText = getSimpleMoveText(newMove, newBoard, false, false);
-            final ChessMove oldMove = result.remove(newText);
-            if (oldMove != null) {
-                final ChessBoard oldBoard = legalMoves.get(oldMove);
-                String oldText;
-                oldText = getSimpleMoveText(oldMove, oldBoard, true, false);
-                newText = getSimpleMoveText(newMove, newBoard, true, false);
-                if (oldText.equals(newText)) {
-                    oldText = getSimpleMoveText(oldMove, oldBoard, false, true);
-                    newText = getSimpleMoveText(newMove, newBoard, false, true);
-                    if (oldText.equals(newText)) {
-                        oldText = getSimpleMoveText(oldMove, oldBoard, true, true);
-                        newText = getSimpleMoveText(newMove, newBoard, true, true);
-                    }
-                }
-                result.put(oldText, oldMove);
-            }
-            result.put(newText, newMove);
-        }
-        return result;
     }
 
     public boolean isKingInCheck(ChessColor color) {
@@ -361,18 +343,10 @@ public final class ChessBoard {
                     final var to = ifOnBoardAndJumpable(from.x + kingMove.x(), from.y + kingMove.y());
                     if (to != null) list.add(new ChessMove(from, to));
                 }
-                if (canCastleKingside()
-                    && from == getNaturalKing()
-                    && !isInCheck(from)
-                    && !isInCheck(from.relative(1, 0)) && isEmpty(from.relative(1, 0))
-                    && !isInCheck(from.relative(2, 0)) && isEmpty(from.relative(2, 0))) {
+                if (canCastleKingside()) {
                     list.add(new ChessMove(from, from.relative(2, 0)));
                 }
-                if (canCastleQueenside()
-                    && from == getNaturalKing()
-                    && !isInCheck(from)
-                    && !isInCheck(from.relative(-1, 0)) && isEmpty(from.relative(-1, 0))
-                    && !isInCheck(from.relative(-2, 0)) && isEmpty(from.relative(-2, 0))) {
+                if (canCastleQueenside()) {
                     list.add(new ChessMove(from, from.relative(-2, 0)));
                 }
             }
@@ -388,6 +362,42 @@ public final class ChessBoard {
             result.put(move, nextBoard);
         }
         return result;
+    }
+
+    public Map<String, ChessMove> getMoveTexts(Map<ChessMove, ChessBoard> legalMoves) {
+        final var result = new HashMap<String, ChessMove>();
+        for (ChessMove newMove : legalMoves.keySet()) {
+            final ChessBoard newBoard = legalMoves.get(newMove);
+            String newText = getSimpleMoveText(newMove, newBoard, false, false);
+            final ChessMove oldMove = result.remove(newText);
+            if (oldMove != null) {
+                final ChessBoard oldBoard = legalMoves.get(oldMove);
+                String oldText;
+                oldText = getSimpleMoveText(oldMove, oldBoard, true, false);
+                newText = getSimpleMoveText(newMove, newBoard, true, false);
+                if (oldText.equals(newText)) {
+                    oldText = getSimpleMoveText(oldMove, oldBoard, false, true);
+                    newText = getSimpleMoveText(newMove, newBoard, false, true);
+                    if (oldText.equals(newText)) {
+                        oldText = getSimpleMoveText(oldMove, oldBoard, true, true);
+                        newText = getSimpleMoveText(newMove, newBoard, true, true);
+                    }
+                }
+                result.put(oldText, oldMove);
+            }
+            result.put(newText, newMove);
+        }
+        return result;
+    }
+
+    public boolean isRepetitionOf(ChessBoard other) {
+        if (activeColor != other.activeColor) return false;
+        for (int i = 0; i < 64; i += 1) {
+            if (board[i] != other.board[i]) return false;
+        }
+        return enPassantSquare == other.enPassantSquare
+            && canCastleKingside() == other.canCastleKingside()
+            && canCastleQueenside() == other.canCastleQueenside();
     }
 
     public void loadStartingPosition() {
@@ -481,6 +491,18 @@ public final class ChessBoard {
         if (fullMoveClock < 0) {
             throw new IllegalArgumentException("Fullmove clock must be a positive number: " + fullMoveString);
         }
+    }
+
+    public Map<ChessPieceType, Integer> countPieces(ChessColor color) {
+        final var result = new EnumMap<ChessPieceType, Integer>(ChessPieceType.class);
+        for (var square : ChessSquare.values()) {
+            final ChessPiece piece = getPieceAt(square);
+            if (piece != null && piece.color == color) {
+                final var old = result.getOrDefault(piece.type, 0);
+                result.put(piece.type, old + 1);
+            }
+        }
+        return result;
     }
 
     @Override
@@ -670,6 +692,10 @@ public final class ChessBoard {
             if (hasPiece(x, y - i, enemy, ChessPieceType.ROOK, ChessPieceType.QUEEN)) return true;
             if (isOffBoardOrBlocked(x, y - i)) break;
         }
+        // King
+        for (var k : KING_MOVES) {
+            if (hasPiece(x + k.x(), y + k.y(), enemy, ChessPieceType.KING)) return true;
+        }
         return false;
     }
 
@@ -753,6 +779,12 @@ public final class ChessBoard {
     private String getSimpleMoveText(ChessMove move, ChessBoard nextBoard, boolean withOriginFile, boolean withOriginRank) {
         final ChessPiece piece = getPieceAt(move.from());
         final ChessPiece taken = getPieceAt(move.to());
+        if (piece.type == ChessPieceType.KING && move.from() == getNaturalKing() && move.to() == getKingsideCastle()) {
+            return "O-O";
+        }
+        if (piece.type == ChessPieceType.KING && move.from() == getNaturalKing() && move.to() == getQueensideCastle()) {
+            return "O-O-O";
+        }
         final var sb = new StringBuilder();
         if (piece.type != ChessPieceType.PAWN) {
             sb.append(piece.type.letter);
@@ -773,7 +805,11 @@ public final class ChessBoard {
             sb.append(move.promotion().getLetter());
         }
         if (nextBoard.isKingInCheck()) {
-            sb.append('+');
+            if (nextBoard.getLegalMoves().isEmpty()) {
+                sb.append('#');
+            } else {
+                sb.append('+');
+            }
         }
         return sb.toString();
     }

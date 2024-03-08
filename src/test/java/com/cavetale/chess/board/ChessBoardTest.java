@@ -9,7 +9,6 @@ public final class ChessBoardTest {
         ChessBoard board = new ChessBoard();
         board.loadFenString(ChessBoard.FEN_START);
         Assert.assertEquals(board.toFenString(), ChessBoard.FEN_START);
-        //
         board.move(ChessSquare.E2, ChessSquare.E4, null);
         board.move(ChessSquare.C7, ChessSquare.C5, null);
         board.move(ChessSquare.G1, ChessSquare.F3, null);
