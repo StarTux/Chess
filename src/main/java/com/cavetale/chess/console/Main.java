@@ -187,7 +187,6 @@ public final class Main {
         final var piece = board.getPieceAt(move.from());
         final var taken = board.getPieceAt(move.to());
         final var color = board.getActiveColor();
-        final var check = board.isKingInCheck();
         game.move(move);
         System.out.println(color.getHumanName()
                            + " moves " + piece.getType().getHumanName()
@@ -200,8 +199,10 @@ public final class Main {
                               ? " and promotes to " + move.promotion().getHumanName()
                               : "")
                            + "."
-                           + (check
-                              ? " Check!"
-                              : ""));
+                           + (game.getCurrentTurn().isCheckmate()
+                              ? " Checkmate!"
+                              : (game.getCurrentBoard().isKingInCheck()
+                                 ? " Check!"
+                                 : "")));
     }
 }
