@@ -20,7 +20,10 @@ import lombok.RequiredArgsConstructor;
  * Most notably, the score encourages early Queen movements.  Perhaps
  * it could be optimized in the future.
  */
+@Data
 public final class DummyAI {
+    private boolean debug;
+
     public ChessMove getBestMove(ChessGame game) {
         final var turn = game.getCurrentTurn();
         final List<Consideration> considerations = new ArrayList<>(turn.getLegalMoves().size());
@@ -34,19 +37,23 @@ public final class DummyAI {
             Consideration consideration = new Consideration(move);
             consideration.compute(turn, board);
             considerations.add(consideration);
+            int repCount = 1;
             for (var old : game.getTurns()) {
-                int repCount = 1;
                 if (board.isRepetitionOf(old.getBoard())) {
-                    System.out.println(" REP " + repCount + " " + board.toFenString() + " " + consideration);
                     repCount += 1;
                 }
-                if (repCount >= 3) {
-                    consideration.total = Integer.MIN_VALUE;
-                }
+            }
+            if (repCount >= 3) {
+                consideration.total = Integer.MIN_VALUE;
             }
         }
         Collections.shuffle(considerations);
         Collections.sort(considerations, Comparator.comparing(Consideration::getTotal).reversed());
+        if (debug) {
+            for (int i = 0; i < 4 && i < considerations.size(); i += 1) {
+                System.out.println(i + ". " + turn.getMoveText(considerations.get(i).getMove()) + " " + considerations.get(i));
+            }
+        }
         return considerations.get(0).getMove();
     }
 
@@ -60,26 +67,31 @@ public final class DummyAI {
         int counterAttackScore;
         int pieceScore;
         int counterPieceScore;
+        int coverScore;
         int takeScore;
         int castleScore;
-        int clockScore;
         int total;
 
         private void compute(ChessTurn turn, ChessBoard board) {
             final var color = turn.getBoard().getActiveColor();
+            final var enemy = color.other();
             final var piece = turn.getBoard().getPieceAt(move.from());
             // Control score
             for (var square : ChessSquare.values()) {
-                if (board.isInCheck(square, color.other())) {
-                    controlScore += 1;
+                if (board.isInCheck(square, enemy)) {
                     final var attackedPiece = board.getPieceAt(square);
+                    if (attackedPiece == null || attackedPiece.color == enemy) {
+                        controlScore += 1;
+                    }
                     if (attackedPiece != null && attackedPiece.color != color) {
                         attackScore += attackedPiece.type.value;
                     }
                 }
                 if (board.isInCheck(square, color)) {
-                    counterControlScore += 1;
                     final var attackedPiece = board.getPieceAt(square);
+                    if (attackedPiece == null || attackedPiece.color == color) {
+                        counterControlScore += 1;
+                    }
                     if (attackedPiece != null && attackedPiece.color == color) {
                         counterAttackScore += attackedPiece.type.value;
                     }
@@ -89,8 +101,18 @@ public final class DummyAI {
             for (var entry : board.countPieces(color).entrySet()) {
                 pieceScore += entry.getKey().getValue() * entry.getValue();
             }
-            for (var entry : board.countPieces(color.other()).entrySet()) {
+            for (var entry : board.countPieces(enemy).entrySet()) {
                 counterPieceScore += entry.getKey().getValue() * entry.getValue();
+            }
+            // Cover
+            for (var square : ChessSquare.values()) {
+                final var coveredPiece = board.getPieceAt(square);
+                if (coveredPiece == null || coveredPiece.color != color) continue;
+                if (board.isInCheck(square, enemy)) {
+                    coverScore += coveredPiece.type.value;
+                } else {
+                    coverScore -= coveredPiece.type.value;
+                }
             }
             // Taking
             final var taken = turn.getBoard().getPieceAt(move.to());
@@ -103,17 +125,16 @@ public final class DummyAI {
             }
             // Castle
             castleScore = (board.canCastleKingside(color) ? 1 : 0)
-                - (board.canCastleKingside(color.other()) ? 1 : 0)
+                - (board.canCastleKingside(enemy) ? 1 : 0)
                 + (board.canCastleQueenside(color) ? 1 : 0)
-                - (board.canCastleQueenside(color.other()) ? 1 : 0);
-            clockScore = board.getHalfMoveClock();
+                - (board.canCastleQueenside(enemy) ? 1 : 0);
             // Final score
-            total = (controlScore - counterControlScore)
-                + (attackScore - counterAttackScore)
+            total = controlScore * 3 - counterControlScore
+                + (attackScore - counterAttackScore) * 10
                 + (pieceScore - counterPieceScore) * 10
                 + takeScore * 15
-                + castleScore * 5
-                - clockScore;
+                + coverScore
+                + castleScore * 5;
         }
     }
 }

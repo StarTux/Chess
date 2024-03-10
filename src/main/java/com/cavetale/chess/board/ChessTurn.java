@@ -43,10 +43,6 @@ public final class ChessTurn {
         state = ChessTurnState.DRAW_BY_AGREEMENT;
     }
 
-    /**
-     * Active color ran out of time.  It's a draw if the other player
-     * has insufficient material.
-     */
     public String getMoveText(ChessMove move) {
         for (var it : moveTexts.entrySet()) {
             if (it.getValue().equals(move)) return it.getKey();
@@ -96,7 +92,7 @@ public final class ChessTurn {
      */
     private boolean isBothKingAndBishopOfSameSquareColor(Map<ChessPieceType, Integer> white, Map<ChessPieceType, Integer> black) {
         if (white.size() != 2 || white.getOrDefault(ChessPieceType.BISHOP, 0) != 1
-            && black.size() != 2 && black.getOrDefault(ChessPieceType.BISHOP, 0) != 1) {
+            || black.size() != 2 || black.getOrDefault(ChessPieceType.BISHOP, 0) != 1) {
             return false;
         }
         // King and Bishop vs King and Bishop of same colored square
@@ -105,6 +101,10 @@ public final class ChessTurn {
         return w != null && b != null && w.getColor() == b.getColor();
     }
 
+    /**
+     * Active color ran out of time.  It's a draw if the other player
+     * has insufficient material.
+     */
     private boolean isTimeoutDraw() {
         final ChessColor color = board.getActiveColor().other();
         final var counts = board.countPieces(color);
