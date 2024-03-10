@@ -564,20 +564,33 @@ public final class ChessBoard {
     }
 
     public String toAsciiBoard() {
+        final String reset = "\u001B[0m";
+        final String gray = "\u001B[90m";
         StringBuilder sb = new StringBuilder();
         for (int y = 7; y >= 0; y -= 1) {
+            sb.append(gray);
             sb.append(ChessRank.get(y).digit);
+            sb.append(reset);
             sb.append(' ');
             for (int x = 0; x < 8; x += 1) {
+                final var black = ChessSquare.at(x, y).getColor() == ChessColor.BLACK;
+                if (black) {
+                    sb.append("\u001B[39;100m");
+                }
                 ChessPiece piece = getPieceAt(x, y);
                 sb.append(piece == null ? ' ' : piece.unicodeSymbol);
                 sb.append(' ');
+                if (black) {
+                    sb.append(reset);
+                }
             }
             sb.append("\n");
         }
         sb.append("  ");
         for (ChessFile file : ChessFile.values()) {
+            sb.append(gray);
             sb.append(file.letter);
+            sb.append(reset);
             sb.append(' ');
         }
         return sb.toString();
