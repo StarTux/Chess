@@ -71,6 +71,14 @@ public final class ChessBoard {
         board[x + 8 * y] = piece;
     }
 
+    public boolean canCastleKingside(ChessColor color) {
+        return color == ChessColor.WHITE ? whiteCanCastleKingside : blackCanCastleKingside;
+    }
+
+    public boolean canCastleQueenside(ChessColor color) {
+        return color == ChessColor.WHITE ? whiteCanCastleQueenside : blackCanCastleQueenside;
+    }
+
     public boolean canCastleKingside() {
         if (!(activeColor == ChessColor.WHITE ? whiteCanCastleKingside : blackCanCastleKingside)) return false;
         final var king = getNaturalKing();
@@ -648,6 +656,10 @@ public final class ChessBoard {
         return (isOnBoard(x, y) && getPieceAt(x, y) == null)
             ? ChessSquare.at(x, y)
             : null;
+    }
+
+    public boolean isInCheck(ChessSquare square, ChessColor defender) {
+        return isInCheck(square.x, square.y, defender);
     }
 
     private boolean isInCheck(int x, int y, ChessColor color) {

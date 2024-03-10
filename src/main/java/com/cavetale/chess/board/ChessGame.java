@@ -43,13 +43,14 @@ public final class ChessGame {
         turns.add(currentTurn);
         currentTurn.fillCache();
         if (!currentTurn.getState().isGameOver()) {
-            int repetitionCount = 0;
+            int repetitionCount = 1;
             for (ChessTurn oldTurn : turns) {
+                if (oldTurn == currentTurn) continue;
                 if (currentTurn.getBoard().isRepetitionOf(oldTurn.getBoard())) {
                     repetitionCount += 1;
                 }
             }
-            if (repetitionCount > 3) {
+            if (repetitionCount >= 3) {
                 currentTurn.setDrawByRepetition();
             }
         }

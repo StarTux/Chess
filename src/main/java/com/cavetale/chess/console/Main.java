@@ -1,5 +1,6 @@
 package com.cavetale.chess.console;
 
+import com.cavetale.chess.ai.DummyAI;
 import com.cavetale.chess.board.ChessColor;
 import com.cavetale.chess.board.ChessGame;
 import com.cavetale.chess.board.ChessMove;
@@ -189,11 +190,7 @@ public final class Main {
                 }
             } else {
                 assert cpu;
-                try {
-                    Thread.sleep(250L);
-                } catch (InterruptedException ie) { }
-                List<ChessMove> list = List.copyOf(turn.getLegalMoves().keySet());
-                move(list.get(random.nextInt(list.size())));
+                move(new DummyAI().getBestMove(game));
             }
         }
     }
