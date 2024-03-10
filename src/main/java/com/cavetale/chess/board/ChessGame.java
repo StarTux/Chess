@@ -69,10 +69,10 @@ public final class ChessGame {
         sb.append("\n");
         final var list = new ArrayList<String>();
         for (var turn : turns) {
+            if (turn.getNextMove() == null) break;
             if (turn.getBoard().getActiveColor() == ChessColor.WHITE) {
                 list.add(turn.getBoard().getFullMoveClock() + ".");
             }
-            if (turn.getNextMove() == null) break;
             list.add(turn.getMoveText(turn.getNextMove()));
         }
         list.add(getResultPgn());
