@@ -47,6 +47,8 @@ public final class Main {
         } else {
             game.loadFenString(fen);
         }
+        if (whiteCPU) game.setWhiteName("CPU");
+        if (blackCPU) game.setBlackName("CPU");
         final BufferedReader stdin = new BufferedReader(new InputStreamReader(System.in));
         while (true) {
             System.out.println(game.getCurrentBoard().getFullMoveClock()

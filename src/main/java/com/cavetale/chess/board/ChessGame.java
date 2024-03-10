@@ -3,12 +3,18 @@ package com.cavetale.chess.board;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import lombok.Getter;
+import lombok.Data;
 
-@Getter
+@Data
 public final class ChessGame {
     private List<ChessTurn> turns;
     private ChessTurn currentTurn;
+    private LocalDate startTime = LocalDate.now();
+    private String eventName = "Cavetale Chess";
+    private String siteName = "cavetale.com";
+    private int roundNumber = 1;
+    private String whiteName = "Unknown";
+    private String blackName = "Unknown";
 
     public ChessGame() { }
 
@@ -57,15 +63,20 @@ public final class ChessGame {
         return true;
     }
 
+    private static String escape(String in) {
+        return in.replace("\"", "\\\"")
+            .replace("\n", "\\n")
+            .replace("]", "\\]");
+    }
+
     public String toPgnString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("[Event \"Cavetale Chess\"]\n");
-        sb.append("[Site \"cavetale.com\"]\n");
-        final var now = LocalDate.now();
-        sb.append(String.format("[Date \"%04d.%02d%02d\"]\n", now.getYear(), now.getMonthValue(), now.getDayOfMonth()));
-        sb.append("[Round \"1\"]\n");
-        sb.append("[White \"Unknown\"]\n");
-        sb.append("[Black \"Unknown\"]\n");
+        sb.append("[Event \"" + escape(eventName) + "\"]\n");
+        sb.append("[Site \"" + escape(siteName) + "\"]\n");
+        sb.append(String.format("[Date \"%04d.%02d.%02d\"]\n", startTime.getYear(), startTime.getMonthValue(), startTime.getDayOfMonth()));
+        sb.append("[Round \"" + roundNumber + "\"]\n");
+        sb.append("[White \"" + escape(whiteName) + "\"]\n");
+        sb.append("[Black \"" + escape(blackName) + "\"]\n");
         sb.append("[Result \"" + getResultPgn() + "\"]\n");
         sb.append("\n");
         final var list = new ArrayList<String>();
