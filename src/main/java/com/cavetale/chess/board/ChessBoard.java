@@ -575,6 +575,13 @@ public final class ChessBoard {
         return sb.toString();
     }
 
+    public ChessSquare findFirstPiece(ChessPiece piece) {
+        for (ChessSquare square : ChessSquare.values()) {
+            if (getPieceAt(square) == piece) return square;
+        }
+        return null;
+    }
+
     private void moveHelper(ChessSquare from, ChessSquare to) {
         board[to.ordinal()] = board[from.ordinal()];
         board[from.ordinal()] = null;

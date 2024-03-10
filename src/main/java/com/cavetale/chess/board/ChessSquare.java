@@ -74,6 +74,7 @@ public enum ChessSquare {
     public final int x;
     public final int y;
     public final String name;
+    public final ChessColor color;
 
     ChessSquare(final ChessFile file, final ChessRank rank) {
         this.file = file;
@@ -81,6 +82,7 @@ public enum ChessSquare {
         this.x = file.ordinal();
         this.y = rank.ordinal();
         this.name = "" + file.letter + rank.digit;
+        this.color = (x & 1) == (y & 1) ? ChessColor.BLACK : ChessColor.WHITE;
     }
 
     public static ChessSquare ofName(String n) {

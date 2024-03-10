@@ -18,7 +18,7 @@ public final class ChessGame {
         board.loadStartingPosition();
         currentTurn = new ChessTurn(null, board);
         turns.add(currentTurn);
-        currentTurn.computeState();
+        currentTurn.fillCache();
     }
 
     public void loadFenString(String fen) {
@@ -27,7 +27,7 @@ public final class ChessGame {
         board.loadFenString(fen);
         currentTurn = new ChessTurn(null, board);
         turns.add(currentTurn);
-        currentTurn.computeState();
+        currentTurn.fillCache();
     }
 
     public ChessBoard getCurrentBoard() {
@@ -35,22 +35,24 @@ public final class ChessGame {
     }
 
     public boolean move(final ChessMove move) {
-        if (currentTurn.isGameOver()) return false;
+        if (currentTurn.getState().isGameOver()) return false;
         final ChessBoard nextBoard = currentTurn.getLegalMoves().get(move);
         if (nextBoard == null) return false;
         currentTurn.setNextMove(move);
         currentTurn = new ChessTurn(move, nextBoard);
-        int repetitionCount = 0;
-        for (ChessTurn oldTurn : turns) {
-            if (currentTurn.getBoard().isRepetitionOf(oldTurn.getBoard())) {
-                repetitionCount += 1;
+        turns.add(currentTurn);
+        currentTurn.fillCache();
+        if (!currentTurn.getState().isGameOver()) {
+            int repetitionCount = 0;
+            for (ChessTurn oldTurn : turns) {
+                if (currentTurn.getBoard().isRepetitionOf(oldTurn.getBoard())) {
+                    repetitionCount += 1;
+                }
+            }
+            if (repetitionCount > 3) {
+                currentTurn.setDrawByRepetition();
             }
         }
-        if (repetitionCount >= 3) {
-            currentTurn.setDrawByRepetition(true);
-        }
-        turns.add(currentTurn);
-        currentTurn.computeState();
         return true;
     }
 
@@ -73,19 +75,15 @@ public final class ChessGame {
             if (turn.getNextMove() == null) break;
             list.add(turn.getMoveText(turn.getNextMove()));
         }
-        if (currentTurn.isGameOver()) {
-            list.add(getResultPgn());
-        } else {
-            list.add("*");
-        }
+        list.add(getResultPgn());
         sb.append(String.join(" ", list));
         return sb.toString();
     }
 
     private String getResultPgn() {
-        if (!currentTurn.isGameOver()) {
+        if (!currentTurn.getState().isGameOver()) {
             return "*";
-        } else if (currentTurn.isDraw()) {
+        } else if (currentTurn.getState().isDraw()) {
             return "1/2-1/2";
         } else {
             return currentTurn.getBoard().getActiveColor() == ChessColor.WHITE
@@ -100,7 +98,7 @@ public final class ChessGame {
         board.loadStartingPosition();
         currentTurn = new ChessTurn(null, board);
         turns.add(currentTurn);
-        currentTurn.computeState();
+        currentTurn.fillCache();
         for (String line : pgn.split("\n")) {
             if (line.startsWith("[")) continue;
             if (line.startsWith(";")) continue;

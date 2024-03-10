@@ -1,8 +1,9 @@
 package com.cavetale.chess.console;
 
-import com.cavetale.chess.board.ChessGame;
 import com.cavetale.chess.board.ChessColor;
+import com.cavetale.chess.board.ChessGame;
 import com.cavetale.chess.board.ChessMove;
+import com.cavetale.chess.board.ChessTurnState;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -53,24 +54,33 @@ public final class Main {
             final var turn = game.getCurrentTurn();
             final var board = turn.getBoard();
             final var color = board.getActiveColor();
-            if (turn.isGameOver()) {
+            final var state = turn.getState();
+            if (state.isGameOver()) {
                 System.out.println(game.toPgnString());
-                if (turn.isCheckmate()) {
+                switch (state) {
+                case CHECKMATE:
                     System.out.println(color.other().getHumanName() + " wins by checkmate!");
-                } else if (turn.isStalemate()) {
+                    break;
+                case STALEMATE:
                     System.out.println("Stalemate!");
-                } else if (turn.isDrawByRepetition()) {
+                    break;
+                case DRAW_BY_REPETITION:
                     System.out.println("Draw by repetition!");
-                } else if (turn.isDrawByInsufficientMaterial()) {
+                    break;
+                case DRAW_BY_INSUFFICIENT_MATERIAL:
                     System.out.println("Draw by insufficient material");
-                } else if (turn.isDrawByFiftyMoveRule()) {
+                    break;
+                case DRAW_BY_FIFTY_MOVE_RULE:
                     System.out.println("Draw by fifty move rule");
-                } else if (turn.isTimeoutDraw()) {
+                    break;
+                case TIMEOUT_DRAW:
                     System.out.println("Draw by timeout");
-                } else if (turn.isTimeout()) {
-                    System.out.println(color.other().getHumanName() + " wins by timeout!");
-                } else {
-                    System.out.println("???");
+                    break;
+                case TIMEOUT:
+                    System.out.println(turn.getWinner().getHumanName() + " wins by timeout!");
+                    break;
+                default:
+                    throw new IllegalStateException("Game Over state=" + state);
                 }
                 break;
             }
@@ -199,9 +209,9 @@ public final class Main {
                               ? " and promotes to " + move.promotion().getHumanName()
                               : "")
                            + "."
-                           + (game.getCurrentTurn().isCheckmate()
+                           + (game.getCurrentTurn().getState() == ChessTurnState.CHECKMATE
                               ? " Checkmate!"
-                              : (game.getCurrentBoard().isKingInCheck()
+                              : (game.getCurrentTurn().getState() == ChessTurnState.CHECK
                                  ? " Check!"
                                  : "")));
     }

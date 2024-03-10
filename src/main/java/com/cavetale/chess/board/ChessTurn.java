@@ -12,14 +12,8 @@ public final class ChessTurn {
     private final ChessBoard board;
     private Map<ChessMove, ChessBoard> legalMoves;
     private Map<String, ChessMove> moveTexts;
-    private boolean check;
-    private boolean checkmate;
-    private boolean stalemate;
-    private boolean drawByFiftyMoveRule;
-    private boolean drawByInsufficientMaterial;
+    private ChessTurnState state;
     // Externally set
-    @Setter private boolean drawByRepetition;
-    @Setter private boolean timeout;
     @Setter private ChessMove nextMove;
 
     public void fillCache() {
@@ -29,6 +23,7 @@ public final class ChessTurn {
         if (moveTexts == null) {
             moveTexts = board.getMoveTexts(legalMoves);
         }
+        state = computeState();
     }
 
     public void clearCache() {
@@ -36,33 +31,22 @@ public final class ChessTurn {
         moveTexts = null;
     }
 
-    public void computeState() {
-        fillCache();
-        check = board.isKingInCheck();
-        checkmate = check && legalMoves.isEmpty();
-        stalemate = !check && legalMoves.isEmpty();
-        drawByFiftyMoveRule = board.getHalfMoveClock() >= 50;
-        // May be imprecise. King and 2 Knights is not considered!
-        drawByInsufficientMaterial = computeInsufficientMaterial(board.countPieces(ChessColor.WHITE))
-            && computeInsufficientMaterial(board.countPieces(ChessColor.BLACK));
+    public void setDrawByRepetition() {
+        state = ChessTurnState.DRAW_BY_REPETITION;
     }
 
-    public boolean isGameOver() {
-        return checkmate || timeout || isDraw();
+    public void setTimeout() {
+        state = isTimeoutDraw() ? ChessTurnState.TIMEOUT_DRAW : ChessTurnState.TIMEOUT;
     }
 
-    public boolean isDraw() {
-        return stalemate || drawByFiftyMoveRule || drawByInsufficientMaterial || drawByRepetition || isTimeoutDraw();
+    public void setAggreeToDraw() {
+        state = ChessTurnState.DRAW_BY_AGREEMENT;
     }
 
-    public ChessTurn move(ChessMove move) {
-        return null;
-    }
-
-    public boolean isTimeoutDraw() {
-        return timeout && computeInsufficientMaterial(board.countPieces(board.getActiveColor().other()));
-    }
-
+    /**
+     * Active color ran out of time.  It's a draw if the other player
+     * has insufficient material.
+     */
     public String getMoveText(ChessMove move) {
         for (var it : moveTexts.entrySet()) {
             if (it.getValue().equals(move)) return it.getKey();
@@ -70,10 +54,63 @@ public final class ChessTurn {
         return null;
     }
 
-    private static boolean computeInsufficientMaterial(Map<ChessPieceType, Integer> count) {
-        // We assume that the mapping {KING:1} exists.
-        return count.size() == 1 // Lone King
-            || (count.size() == 2 && count.getOrDefault(ChessPieceType.BISHOP, 0) == 1)
-            || (count.size() == 2 && count.getOrDefault(ChessPieceType.KNIGHT, 0) == 1);
+    public ChessColor getWinner() {
+        if (!state.gameOver || state.draw) return null;
+        return board.getActiveColor().other();
+    }
+
+    private ChessTurnState computeState() {
+        final boolean check = board.isKingInCheck();
+        if (check && legalMoves.isEmpty()) return ChessTurnState.CHECKMATE;
+        if (!check && legalMoves.isEmpty()) return ChessTurnState.STALEMATE;
+        if (board.getHalfMoveClock() >= 50) return ChessTurnState.DRAW_BY_FIFTY_MOVE_RULE;
+        final var whiteCounts = board.countPieces(ChessColor.WHITE);
+        final var blackCounts = board.countPieces(ChessColor.BLACK);
+        if (isKingVsKing(whiteCounts, blackCounts)
+            || isKingVsKingAndBishopOrKnight(whiteCounts, blackCounts)
+            || isKingVsKingAndBishopOrKnight(blackCounts, whiteCounts)
+            || isBothKingAndBishopOfSameSquareColor(whiteCounts, blackCounts)) {
+            return ChessTurnState.DRAW_BY_INSUFFICIENT_MATERIAL;
+        }
+        return check ? ChessTurnState.CHECK : ChessTurnState.PLAY;
+    }
+
+    /**
+     * This is called once.
+     */
+    private static boolean isKingVsKing(Map<ChessPieceType, Integer> white, Map<ChessPieceType, Integer> black) {
+        return white.size() == 1 && black.size() == 1;
+    }
+
+    /**
+     * This is called twice.
+     */
+    private static boolean isKingVsKingAndBishopOrKnight(Map<ChessPieceType, Integer> a, Map<ChessPieceType, Integer> b) {
+        return a.size() == 1 && b.size() == 2
+            && (b.getOrDefault(ChessPieceType.BISHOP, 0) == 1
+                || b.getOrDefault(ChessPieceType.KNIGHT, 0) == 1);
+    }
+
+    /**
+     * This is called once.
+     */
+    private boolean isBothKingAndBishopOfSameSquareColor(Map<ChessPieceType, Integer> white, Map<ChessPieceType, Integer> black) {
+        if (white.size() != 2 || white.getOrDefault(ChessPieceType.BISHOP, 0) != 1
+            && black.size() != 2 && black.getOrDefault(ChessPieceType.BISHOP, 0) != 1) {
+            return false;
+        }
+        // King and Bishop vs King and Bishop of same colored square
+        final ChessSquare w = board.findFirstPiece(ChessPiece.WHITE_BISHOP);
+        final ChessSquare b = board.findFirstPiece(ChessPiece.BLACK_BISHOP);
+        return w != null && b != null && w.getColor() == b.getColor();
+    }
+
+    private boolean isTimeoutDraw() {
+        final ChessColor color = board.getActiveColor().other();
+        final var counts = board.countPieces(color);
+        return counts.size() == 1
+            || (counts.size() == 2
+                && counts.getOrDefault(ChessPieceType.BISHOP, 0) == 1
+                && counts.getOrDefault(ChessPieceType.KNIGHT, 0) == 1);
     }
 }
