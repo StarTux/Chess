@@ -91,9 +91,15 @@ public final class Main {
                 while (true) {
                     String line = stdin.readLine();
                     if (line.isEmpty()) {
-                        final var moves = new ArrayList<>(turn.getMoveTexts().keySet());
-                        Collections.sort(moves);
-                        System.out.println(moves.size() + " " + moves);
+                        System.out.println("Chess Commands");
+                        System.out.println("fen - Print current FEN string");
+                        System.out.println("loadfen - Read FEN until EOF");
+                        System.out.println("pgn - Print current PGN file");
+                        System.out.println("loadpgn - Read PGN file until EOF");
+                        System.out.println("board - Print the board");
+                        System.out.println("moves - Print all legal moves");
+                        System.out.println("random - Make random legal move");
+                        System.out.println("<move> - Make move");
                         continue;
                     }
                     if (line.equals("fen")) {
