@@ -589,6 +589,7 @@ public final class WorldChessBoard {
                             ? " Check!"
                             : "")), GREEN));
         if (state.isGameOver()) {
+            plugin().getLogger().info(getBoardId() + "\n" + game.toPgnString());
             saveTag.setState(ChessSaveTag.ChessState.WAITING);
             switch (state) {
             case CHECKMATE:
