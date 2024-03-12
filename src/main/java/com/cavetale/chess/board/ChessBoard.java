@@ -234,7 +234,6 @@ public final class ChessBoard {
                 if (enPassantSquare != null
                     && (from.x + 1 == enPassantSquare.x || from.x - 1 == enPassantSquare.x)
                     && (from.y + pawnDirection == enPassantSquare.y)) {
-                    System.out.println("EN PASSANT " + enPassantSquare);
                     pawnMoves.add(enPassantSquare);
                 }
                 // Pawn promotion
