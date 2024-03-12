@@ -6,6 +6,7 @@ import com.cavetale.chess.board.ChessColor;
 import com.cavetale.chess.board.ChessGame;
 import com.cavetale.chess.board.ChessMove;
 import com.cavetale.chess.board.ChessPiece;
+import com.cavetale.chess.board.ChessPieceType;
 import com.cavetale.chess.board.ChessSquare;
 import com.cavetale.chess.board.ChessTurnState;
 import com.cavetale.core.event.hud.PlayerHudEvent;
@@ -44,8 +45,10 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import static com.cavetale.chess.ChessPlugin.plugin;
+import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static net.kyori.adventure.text.format.TextDecoration.BOLD;
@@ -605,10 +608,9 @@ public final class WorldChessBoard {
 
     public void move(ChessMove move) {
         final var board = game.getCurrentBoard();
+        final var turnNumber = board.getFullMoveClock();
         final var piece = board.getPieceAt(move.from());
-        final var taken = board.getEnPassantTaken() != null
-            ? board.getPieceAt(board.getEnPassantTaken())
-            : board.getPieceAt(move.to());
+        var taken = board.getPieceAt(move.to());
         final var color = board.getActiveColor();
         final var player = saveTag.getPlayer(color);
         final var moveText = game.getCurrentTurn().getMoveText(move);
@@ -625,31 +627,40 @@ public final class WorldChessBoard {
             world.playSound(getCenterLocation(move.to()), Sound.BLOCK_WOOD_FALL, SoundCategory.BLOCKS, 2.0f, 0.8f);
         }
         if (newBoard.getEnPassantTaken() != null) {
+            taken = ChessPiece.of(color.other(), ChessPieceType.PAWN);
             final var old = pieces.remove(newBoard.getEnPassantTaken());
             if (old != null) old.remove();
         }
         // Announce
-        final var turn = game.getCurrentTurn();
-        final var state = turn.getState();
-        announce(text(player.getName()
-                      + " moves " + piece.getType().getHumanName()
-                      + " from " + move.from().getName()
-                      + " to " + move.to().getName()
-                      + (taken != null
-                         ? " and takes " + taken.getType().getHumanName()
-                         : "")
-                      + (move.promotion() != null
-                         ? " and promotes to " + move.promotion().getHumanName()
-                         : "")
-                      + " (" + moveText + ")"
-                      + "."
-                      + (state == ChessTurnState.CHECKMATE
-                         ? " Checkmate!"
-                         : (state == ChessTurnState.CHECK
-                            ? " Check!"
-                            : "")), GREEN));
+        final var newTurn = game.getCurrentTurn();
+        final var newState = newTurn.getState();
+        announce(textOfChildren(text(player.getName(), GREEN),
+                                text(" plays ", GRAY),
+                                text(piece.getType().getHumanName(), GREEN),
+                                text(" from ", GRAY),
+                                text(move.from().getName(), GREEN),
+                                text(" to ", GRAY),
+                                text(move.to().getName(), GREEN),
+                                (taken != null
+                                 ? textOfChildren(text(" and takes ", GRAY),
+                                                  text(taken.getType().getHumanName(), GREEN))
+                                 : empty()),
+                                (move.promotion() != null
+                                 ? textOfChildren(text(" and promotes to ", GRAY),
+                                                  text(move.promotion().getHumanName(), GREEN))
+                                 : empty()),
+                                text(" (", GRAY),
+                                text(turnNumber, GRAY),
+                                text((color == ChessColor.WHITE ? ". " : "... "), GRAY),
+                                text(moveText, GREEN),
+                                text(").", GRAY),
+                                (newState == ChessTurnState.CHECKMATE
+                                 ? text(" Checkmate!", GREEN, BOLD)
+                                 : (newState == ChessTurnState.CHECK
+                                    ? text(" Check!", GREEN, BOLD)
+                                    : empty()))));
         saveTag.getPlayer(color).stopMove();
-        if (state.isGameOver()) {
+        if (newState.isGameOver()) {
             onGameOver();
         } else {
             saveTag.getPlayer(newBoard.getActiveColor()).startMove();
