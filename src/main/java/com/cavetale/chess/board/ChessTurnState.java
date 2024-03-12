@@ -22,6 +22,7 @@ public enum ChessTurnState {
     DRAW_BY_AGREEMENT(true, true),
     TIMEOUT_DRAW(true, true),
     TIMEOUT(true, false),
+    RESIGNATION(true, false),
     ;
 
     public final boolean gameOver;

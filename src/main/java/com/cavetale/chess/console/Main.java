@@ -64,6 +64,9 @@ public final class Main {
                 case CHECKMATE:
                     System.out.println(color.other().getHumanName() + " wins by checkmate!");
                     break;
+                case RESIGNATION:
+                    System.out.println(color.other().getHumanName() + " wins by resignation!");
+                    break;
                 case STALEMATE:
                     System.out.println("Stalemate!");
                     break;
@@ -75,6 +78,9 @@ public final class Main {
                     break;
                 case DRAW_BY_FIFTY_MOVE_RULE:
                     System.out.println("Draw by fifty move rule");
+                    break;
+                case DRAW_BY_AGREEMENT:
+                    System.out.println("Draw by agreement");
                     break;
                 case TIMEOUT_DRAW:
                     System.out.println("Draw by timeout");

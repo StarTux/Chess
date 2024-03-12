@@ -79,6 +79,7 @@ public final class WorldChessBoard {
     private final DefaultEntityChessPieceSet pieceSet = new DefaultEntityChessPieceSet();
     private ChessSaveTag saveTag;
     private BossBar bossBar;
+    private ChessColor drawOffered;
     // Move selection
     private ChessSquare moveFrom;
     private final List<ChessSquare> legalTargets = new ArrayList<>();
@@ -359,18 +360,18 @@ public final class WorldChessBoard {
     }
 
     public void onPlayerInput(Player player, ChessSquare square) {
-        final ChessPiece piece = game.getCurrentBoard().getPieceAt(square);
         switch (saveTag.getState()) {
         case WAITING: {
-            if (piece == null) return;
             clickQueue(player);
             break;
         }
         case GAME: {
-            if (!saveTag.getPlayer(game.getCurrentBoard().getActiveColor()).isPlayer(player)) {
-                return;
+            final var color = game.getCurrentBoard().getActiveColor();
+            if (saveTag.getPlayer(color).isPlayer(player)) {
+                clickMove(player, square);
+            } else if (saveTag.getPlayer(color.other()).isPlayer(player)) {
+                clickResignMenu(player, color.other());
             }
-            clickMove(player, square);
             break;
         }
         default: break;
@@ -423,6 +424,8 @@ public final class WorldChessBoard {
                     saveTag.getQueue().add(player.getUniqueId());
                     if (saveTag.getQueue().size() == 2) {
                         startQueue();
+                    } else {
+                        announce(text(player.getName() + " would like to play. Click the board to accept.", GREEN));
                     }
                 });
             gui.setItem(6, Items.text(new ItemStack(Material.COMPARATOR), List.of(text("Play against Computer", GREEN))), click -> {
@@ -461,8 +464,16 @@ public final class WorldChessBoard {
 
     private void clickMove(Player player, ChessSquare clickedSquare) {
         final var piece = game.getCurrentBoard().getPieceAt(clickedSquare);
+        final var color = game.getCurrentBoard().getActiveColor();
         if (moveFrom == null || !legalTargets.contains(clickedSquare)) {
-            if (piece == null || piece.color != game.getCurrentBoard().getActiveColor()) return;
+            if (piece == null || piece.color != color) {
+                if (moveFrom == null) {
+                    clickResignMenu(player, color);
+                }
+                moveFrom = null;
+                legalTargets.clear();
+                return;
+            }
             moveFrom = clickedSquare;
             legalTargets.clear();
             for (var move : game.getCurrentTurn().getLegalMoves().keySet()) {
@@ -473,8 +484,8 @@ public final class WorldChessBoard {
                 }
             }
         } else if (moveFrom == clickedSquare) {
-            // Clicks tend to spam
-            return;
+            moveFrom = null;
+            legalTargets.clear();
         } else if (moveFrom != null && legalTargets.contains(clickedSquare)) {
             final var list = new ArrayList<ChessMove>();
             for (var move : game.getCurrentTurn().getLegalMoves().keySet()) {
@@ -485,6 +496,8 @@ public final class WorldChessBoard {
             moveFrom = null;
             legalTargets.clear();
             if (list.isEmpty()) {
+                moveFrom = null;
+                legalTargets.clear();
                 return;
             } else if (list.size() == 1) {
                 move(list.get(0));
@@ -545,13 +558,13 @@ public final class WorldChessBoard {
         save();
         clearPieces();
         spawnAllPieces();
+        final Player white = saveTag.getWhite().getPlayer();
+        if (white != null) {
+            white.sendMessage(text("You play as White", GREEN));
+        }
         final Player black = saveTag.getBlack().getPlayer();
         if (black != null) {
             black.sendMessage(text("You play as Black", GREEN));
-        }
-        final Player white = saveTag.getWhite().getPlayer();
-        if (white != null) {
-            black.sendMessage(text("You play as White", GREEN));
         }
     }
 
@@ -623,6 +636,7 @@ public final class WorldChessBoard {
         } else {
             saveTag.getPlayer(newBoard.getActiveColor()).startMove();
         }
+        drawOffered = null;
     }
 
     private void updateBoard(ChessMove move, ChessColor color) {
@@ -653,6 +667,9 @@ public final class WorldChessBoard {
         case CHECKMATE:
             announce(text(turn.getWinner().getHumanName() + " wins by checkmate!", GREEN));
             break;
+        case RESIGNATION:
+            announce(text(turn.getWinner().getHumanName() + " wins by resignation!", GREEN));
+            break;
         case STALEMATE:
             announce(text("Stalemate!", GREEN));
             break;
@@ -664,6 +681,9 @@ public final class WorldChessBoard {
             break;
         case DRAW_BY_FIFTY_MOVE_RULE:
             announce(text("Draw by fifty move rule", GREEN));
+            break;
+        case DRAW_BY_AGREEMENT:
+            announce(text("Both players agreed to draw", GREEN));
             break;
         case TIMEOUT_DRAW:
             announce(text("Draw by timeout", GREEN));
@@ -707,5 +727,38 @@ public final class WorldChessBoard {
             bossBar.name(join(noSeparators(), bossBarText));
             bossBar.progress(progress);
         }
+    }
+
+    private void clickResignMenu(Player player, ChessColor color) {
+        final int size = 9;
+        final var builder = GuiOverlay.BLANK.builder(9, WHITE)
+            .title(text("End the Game?", BLACK));
+        final Gui gui = new Gui().size(size).title(builder.build());
+        gui.setItem(2, Items.text(Mytems.REDO.createItemStack(), List.of(text((drawOffered == color.other() ? "Agree to Draw" : "Offer Draw"), GREEN))), click -> {
+                if (!click.isLeftClick()) return;
+                player.closeInventory();
+                if (saveTag.getState() != ChessSaveTag.ChessState.GAME) return;
+                if (game.getCurrentTurn().getState().isGameOver()) return;
+                if (!saveTag.getPlayer(color).isPlayer(player)) return;
+                if (drawOffered == null) {
+                    drawOffered = color;
+                    announce(text(player.getName() + " offered a draw", RED));
+                } else if (drawOffered == color) {
+                    player.sendMessage(text("You already offered this turn", RED));
+                } else if (drawOffered == color.other()) {
+                    game.getCurrentTurn().setAggreeToDraw();
+                    onGameOver();
+                }
+            });
+        gui.setItem(6, Items.text(new ItemStack(Material.WHITE_BANNER), List.of(text("Resign", RED))), click -> {
+                if (!click.isLeftClick()) return;
+                player.closeInventory();
+                if (saveTag.getState() != ChessSaveTag.ChessState.GAME) return;
+                if (game.getCurrentTurn().getState().isGameOver()) return;
+                if (!saveTag.getPlayer(color).isPlayer(player)) return;
+                game.getCurrentTurn().resign(color);
+                onGameOver();
+            });
+        gui.open(player);
     }
 }

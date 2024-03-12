@@ -15,6 +15,7 @@ public final class ChessTurn {
     private ChessTurnState state;
     // Externally set
     @Setter private ChessMove nextMove;
+    private ChessColor resignation;
 
     public void fillCache() {
         if (legalMoves == null) {
@@ -43,6 +44,11 @@ public final class ChessTurn {
         state = ChessTurnState.DRAW_BY_AGREEMENT;
     }
 
+    public void resign(ChessColor color) {
+        state = ChessTurnState.RESIGNATION;
+        resignation = color;
+    }
+
     public String getMoveText(ChessMove move) {
         for (var it : moveTexts.entrySet()) {
             if (it.getValue().equals(move)) return it.getKey();
@@ -52,11 +58,13 @@ public final class ChessTurn {
 
     public ChessColor getWinner() {
         if (!state.gameOver || state.draw) return null;
+        if (resignation != null) return resignation.other();
         return board.getActiveColor().other();
     }
 
     private ChessTurnState computeState() {
         final boolean check = board.isKingInCheck();
+        if (resignation != null) return ChessTurnState.RESIGNATION;
         if (check && legalMoves.isEmpty()) return ChessTurnState.CHECKMATE;
         if (!check && legalMoves.isEmpty()) return ChessTurnState.STALEMATE;
         if (board.getHalfMoveClock() >= 50) return ChessTurnState.DRAW_BY_FIFTY_MOVE_RULE;
