@@ -3,6 +3,7 @@ package com.cavetale.chess.world;
 import com.cavetale.area.struct.Area;
 import com.cavetale.area.struct.AreasFile;
 import com.cavetale.chess.board.ChessSquare;
+import com.cavetale.core.event.hud.PlayerHudEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -63,7 +64,6 @@ public final class Worlds implements Listener {
         }
         return result;
     }
-
 
     public WorldChessBoard getBoardAtPerimeter(Location location) {
         final var world = location.getWorld();
@@ -240,6 +240,19 @@ public final class Worlds implements Listener {
         if (target == null) return;
         if (EntityChessPiece.isChessPiece(target)) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    private void onPlayerHud(PlayerHudEvent event) {
+        final var player = event.getPlayer();
+        final var location = player.getLocation();
+        final var world = location.getWorld();
+        for (var board : boards) {
+            if (!board.isAwake()) continue;
+            if (!world.equals(board.getWorld())) continue;
+            if (!board.getPerimeter().contains(location)) continue;
+            board.onPlayerHud(event);
         }
     }
 }

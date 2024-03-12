@@ -37,8 +37,8 @@ public final class ChessSaveTag implements Serializable {
         stateStarted = System.currentTimeMillis();
         switch (newState) {
         case WAITING:
-            white.clear();
-            black.clear();
+            white = new ChessPlayer();
+            black = new ChessPlayer();
             queue.clear();
             break;
         case GAME:
@@ -52,19 +52,21 @@ public final class ChessSaveTag implements Serializable {
         return color == ChessColor.WHITE ? white : black;
     }
 
+    public List<ChessPlayer> getPlayers() {
+        return List.of(white, black);
+    }
+
     @Data
     public static final class ChessPlayer {
         private boolean cpu;
         private UUID player;
         private long moveStarted;
+        private long timeBank;
+        private long timeIncrement;
+        private boolean playing;
 
         public boolean isEmpty() {
             return !cpu && player == null;
-        }
-
-        public void clear() {
-            cpu = false;
-            player = null;
         }
 
         public String getName() {
@@ -93,7 +95,13 @@ public final class ChessSaveTag implements Serializable {
         }
 
         public void startMove() {
+            playing = true;
             moveStarted = System.currentTimeMillis();
+        }
+
+        public void stopMove() {
+            playing = false;
+            timeBank = Math.max(0, timeBank - getMoveMillis() + timeIncrement);
         }
 
         public long getMoveMillis() {
@@ -102,6 +110,16 @@ public final class ChessSaveTag implements Serializable {
 
         public int getMoveSeconds() {
             return (int) (getMoveMillis() / 1000L);
+        }
+
+        public long getTimeBankMillis() {
+            return playing
+                ? timeBank - getMoveMillis()
+                : timeBank;
+        }
+
+        public int getTimeBankSeconds() {
+            return (int) (getTimeBankMillis() / 1000L);
         }
     }
 }

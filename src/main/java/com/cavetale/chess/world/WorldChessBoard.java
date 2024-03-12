@@ -8,6 +8,8 @@ import com.cavetale.chess.board.ChessMove;
 import com.cavetale.chess.board.ChessPiece;
 import com.cavetale.chess.board.ChessSquare;
 import com.cavetale.chess.board.ChessTurnState;
+import com.cavetale.core.event.hud.PlayerHudEvent;
+import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.GuiOverlay;
 import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.core.struct.Cuboid;
@@ -27,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Axis;
 import org.bukkit.Chunk;
@@ -39,8 +42,11 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import static com.cavetale.chess.ChessPlugin.plugin;
+import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
+import static net.kyori.adventure.text.format.TextDecoration.BOLD;
 
 /**
  * Represent one board in a world.  Boards can be asleep if their
@@ -72,6 +78,7 @@ public final class WorldChessBoard {
     private boolean awake;
     private final DefaultEntityChessPieceSet pieceSet = new DefaultEntityChessPieceSet();
     private ChessSaveTag saveTag;
+    private BossBar bossBar;
     // Move selection
     private ChessSquare moveFrom;
     private final List<ChessSquare> legalTargets = new ArrayList<>();
@@ -328,8 +335,13 @@ public final class WorldChessBoard {
     protected void tick() {
         switch (saveTag.getState()) {
         case GAME:
+            updateBossBar();
             final var player = saveTag.getPlayer(game.getCurrentBoard().getActiveColor());
-            if (player.isCpu()) {
+            if (player.getTimeBankMillis() == 0L) {
+                game.getCurrentTurn().setTimeout();
+                onGameOver();
+                return;
+            } else if (player.isCpu()) {
                 if (player.getMoveSeconds() < 5) return;
                 final var move = new DummyAI().getBestMove(game);
                 move(move);
@@ -371,6 +383,12 @@ public final class WorldChessBoard {
         saveTag.setState(ChessSaveTag.ChessState.WAITING);
         clearPieces();
         spawnAllPieces();
+    }
+
+    protected void onPlayerHud(PlayerHudEvent event) {
+        if (bossBar != null) {
+            event.bossbar(PlayerHudPriority.DEFAULT, bossBar);
+        }
     }
 
     private void clickQueue(Player player) {
@@ -502,6 +520,9 @@ public final class WorldChessBoard {
         return new File(folder, name + ".json");
     }
 
+    public static final long TIME_BANK = 1000L * 60L * 15L;
+    public static final long TIME_INCREMENT = 1000L * 10L;
+
     private void startQueue() {
         if (saveTag.getState() != ChessSaveTag.ChessState.WAITING) return;
         if (saveTag.getQueue().size() != 2) return;
@@ -510,6 +531,10 @@ public final class WorldChessBoard {
             : ChessColor.BLACK;
         saveTag.getPlayer(color).setPlayer(saveTag.getQueue().get(0));
         saveTag.getPlayer(color.other()).setPlayer(saveTag.getQueue().get(1));
+        for (var p : saveTag.getPlayers()) {
+            p.setTimeBank(TIME_BANK);
+            p.setTimeIncrement(TIME_INCREMENT);
+        }
         saveTag.setState(ChessSaveTag.ChessState.GAME);
         game = new ChessGame();
         game.initialize();
@@ -537,6 +562,10 @@ public final class WorldChessBoard {
             : ChessColor.BLACK;
         saveTag.getPlayer(color).setPlayer(player);
         saveTag.getPlayer(color.other()).setCpu(true);
+        for (var p : saveTag.getPlayers()) {
+            p.setTimeBank(TIME_BANK);
+            p.setTimeIncrement(TIME_INCREMENT);
+        }
         saveTag.setState(ChessSaveTag.ChessState.GAME);
         game = new ChessGame();
         game.initialize();
@@ -588,35 +617,11 @@ public final class WorldChessBoard {
                          : (state == ChessTurnState.CHECK
                             ? " Check!"
                             : "")), GREEN));
+        saveTag.getPlayer(color).stopMove();
         if (state.isGameOver()) {
-            plugin().getLogger().info(getBoardId() + "\n" + game.toPgnString());
-            saveTag.setState(ChessSaveTag.ChessState.WAITING);
-            switch (state) {
-            case CHECKMATE:
-                announce(text(turn.getWinner().getHumanName() + " wins by checkmate!", GREEN));
-                break;
-            case STALEMATE:
-                announce(text("Stalemate!", GREEN));
-                break;
-            case DRAW_BY_REPETITION:
-                announce(text("Draw by repetition!", GREEN));
-                break;
-            case DRAW_BY_INSUFFICIENT_MATERIAL:
-                announce(text("Draw by insufficient material", GREEN));
-                break;
-            case DRAW_BY_FIFTY_MOVE_RULE:
-                announce(text("Draw by fifty move rule", GREEN));
-                break;
-            case TIMEOUT_DRAW:
-                announce(text("Draw by timeout", GREEN));
-                break;
-            case TIMEOUT:
-                announce(text(turn.getWinner().getHumanName() + " wins by timeout!", GREEN));
-                break;
-            default: break;
-            }
+            onGameOver();
         } else {
-            saveTag.getPlayer(game.getCurrentBoard().getActiveColor()).startMove();
+            saveTag.getPlayer(newBoard.getActiveColor()).startMove();
         }
     }
 
@@ -637,6 +642,70 @@ public final class WorldChessBoard {
                 final var placed = pieceSet.place(this, move.to(), newPiece);
                 if (placed != null) pieces.put(move.to(), placed);
             }
+        }
+    }
+
+    private void onGameOver() {
+        plugin().getLogger().info(getBoardId() + "\n" + game.toPgnString());
+        saveTag.setState(ChessSaveTag.ChessState.WAITING);
+        final var turn = game.getCurrentTurn();
+        switch (turn.getState()) {
+        case CHECKMATE:
+            announce(text(turn.getWinner().getHumanName() + " wins by checkmate!", GREEN));
+            break;
+        case STALEMATE:
+            announce(text("Stalemate!", GREEN));
+            break;
+        case DRAW_BY_REPETITION:
+            announce(text("Draw by repetition!", GREEN));
+            break;
+        case DRAW_BY_INSUFFICIENT_MATERIAL:
+            announce(text("Draw by insufficient material", GREEN));
+            break;
+        case DRAW_BY_FIFTY_MOVE_RULE:
+            announce(text("Draw by fifty move rule", GREEN));
+            break;
+        case TIMEOUT_DRAW:
+            announce(text("Draw by timeout", GREEN));
+            break;
+        case TIMEOUT:
+            announce(text(turn.getWinner().getHumanName() + " wins by timeout!", GREEN));
+            break;
+        default: break;
+        }
+    }
+
+    private void updateBossBar() {
+        final List<Component> bossBarText = new ArrayList<>();
+        float progress = 1f;
+        for (var color : ChessColor.values()) {
+            if (color == ChessColor.BLACK) {
+                bossBarText.add(text(" | ", DARK_GRAY));
+            }
+            final var player = saveTag.getPlayer(color);
+            final int seconds = player.getTimeBankSeconds();
+            final int minutes = seconds / 60;
+            final boolean playing = player.isPlaying();
+            if (color == ChessColor.WHITE) {
+                bossBarText.add(text(String.format("%02d", minutes), playing ? WHITE : GRAY).decoration(BOLD, playing));
+                bossBarText.add(text(":", GRAY));
+                bossBarText.add(text(String.format("%02d", seconds % 60), playing ? WHITE : GRAY).decoration(BOLD, playing));
+                bossBarText.add(text(" " + player.getName(), playing ? WHITE : GRAY).decoration(BOLD, playing));
+            } else {
+                bossBarText.add(text(player.getName() + " ", playing ? WHITE : GRAY).decoration(BOLD, playing));
+                bossBarText.add(text(String.format("%02d", minutes), playing ? WHITE : GRAY).decoration(BOLD, playing));
+                bossBarText.add(text(":", GRAY));
+                bossBarText.add(text(String.format("%02d", seconds % 60), playing ? WHITE : GRAY).decoration(BOLD, playing));
+            }
+            if (playing) {
+                progress = (float) (player.getTimeBankMillis() / TIME_BANK);
+            }
+        }
+        if (bossBar == null) {
+            bossBar = BossBar.bossBar(join(noSeparators(), bossBarText), progress, BossBar.Color.WHITE, BossBar.Overlay.NOTCHED_20);
+        } else {
+            bossBar.name(join(noSeparators(), bossBarText));
+            bossBar.progress(progress);
         }
     }
 }
