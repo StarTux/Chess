@@ -37,6 +37,8 @@ import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
@@ -469,12 +471,12 @@ public final class WorldChessBoard {
             if (piece == null || piece.color != color) {
                 if (moveFrom == null) {
                     clickResignMenu(player, color);
+                    player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 1.25f);
                 }
                 moveFrom = null;
                 legalTargets.clear();
                 return;
             }
-            moveFrom = clickedSquare;
             legalTargets.clear();
             for (var move : game.getCurrentTurn().getLegalMoves().keySet()) {
                 if (move.from() != clickedSquare) continue;
@@ -483,7 +485,14 @@ public final class WorldChessBoard {
                     legalTargets.add(move.to());
                 }
             }
+            if (!legalTargets.isEmpty()) {
+                player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 1.25f);
+                moveFrom = clickedSquare;
+            } else {
+                player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
+            }
         } else if (moveFrom == clickedSquare) {
+            player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
             moveFrom = null;
             legalTargets.clear();
         } else if (moveFrom != null && legalTargets.contains(clickedSquare)) {
@@ -498,6 +507,7 @@ public final class WorldChessBoard {
             if (list.isEmpty()) {
                 moveFrom = null;
                 legalTargets.clear();
+                player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
                 return;
             } else if (list.size() == 1) {
                 move(list.get(0));
@@ -522,6 +532,7 @@ public final class WorldChessBoard {
                     index += 2;
                 }
                 gui.open(player);
+                player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 1.25f);
             }
         }
     }
@@ -595,7 +606,9 @@ public final class WorldChessBoard {
     public void move(ChessMove move) {
         final var board = game.getCurrentBoard();
         final var piece = board.getPieceAt(move.from());
-        final var taken = board.getPieceAt(move.to());
+        final var taken = board.getEnPassantTaken() != null
+            ? board.getPieceAt(board.getEnPassantTaken())
+            : board.getPieceAt(move.to());
         final var color = board.getActiveColor();
         final var player = saveTag.getPlayer(color);
         final var moveText = game.getCurrentTurn().getMoveText(move);
@@ -605,6 +618,11 @@ public final class WorldChessBoard {
         updateBoard(move, color);
         if (newBoard.getCastleMove() != null) {
             updateBoard(newBoard.getCastleMove(), color);
+        }
+        if (taken != null) {
+            world.playSound(getCenterLocation(move.to()), Sound.BLOCK_GLASS_BREAK, SoundCategory.BLOCKS, 2.0f, 0.5f);
+        } else {
+            world.playSound(getCenterLocation(move.to()), Sound.BLOCK_WOOD_FALL, SoundCategory.BLOCKS, 2.0f, 0.8f);
         }
         if (newBoard.getEnPassantTaken() != null) {
             final var old = pieces.remove(newBoard.getEnPassantTaken());
