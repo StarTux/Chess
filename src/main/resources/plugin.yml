@@ -8,7 +8,7 @@ author: StarTux
 website: https://github.com/StarTux/Chess
 description: Chess Plugin
 
-depend: [Core]
+depend: [Core, Mytems, Area]
 softdepend: []
 
 commands:
@@ -20,8 +20,19 @@ commands:
     usage: |-
       /chess
 
+  chessadmin:
+    aliases: [chessadm]
+    description: Chess Admin Command
+    permission: chess.admin
+    usage: |-
+      /chessadm
+
 permissions:
 
   chess.chess:
     description: Use /chess
+    default: op
+
+  chess.admin:
+    description: Use /chessadm
     default: op

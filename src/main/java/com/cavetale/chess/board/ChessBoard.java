@@ -18,6 +18,7 @@ public final class ChessBoard {
     private ChessSquare enPassantSquare;
     private int halfMoveClock;
     private int fullMoveClock = 1;
+    private ChessMove castleMove;
 
     public static final String FEN_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -147,10 +148,13 @@ public final class ChessBoard {
         }
         // Castle detection
         if (doCastleKingside) {
-            moveHelper(getNaturalKingsideRook(), to.relative(-1, 0));
-        }
-        if (doCastleQueenside) {
-            moveHelper(getNaturalQueensideRook(), to.relative(1, 0));
+            castleMove = new ChessMove(getNaturalKingsideRook(), to.relative(-1, 0));
+            moveHelper(castleMove.from(), castleMove.to());
+        } else if (doCastleQueenside) {
+            castleMove = new ChessMove(getNaturalQueensideRook(), to.relative(1, 0));
+            moveHelper(castleMove.from(), castleMove.to());
+        } else {
+            castleMove = null;
         }
         // Update castle flags
         if (from == getNaturalKing()) {
@@ -803,10 +807,10 @@ public final class ChessBoard {
                                                           new Vec2i(-1, 1),
                                                           new Vec2i(0, 1));
 
-    private static final List<ChessPieceType> PROMOTION_PIECES = List.of(ChessPieceType.QUEEN,
-                                                                         ChessPieceType.ROOK,
-                                                                         ChessPieceType.BISHOP,
-                                                                         ChessPieceType.KNIGHT);
+    public static final List<ChessPieceType> PROMOTION_PIECES = List.of(ChessPieceType.QUEEN,
+                                                                        ChessPieceType.ROOK,
+                                                                        ChessPieceType.BISHOP,
+                                                                        ChessPieceType.KNIGHT);
 
     private String getSimpleMoveText(ChessMove move, ChessBoard nextBoard, boolean withOriginFile, boolean withOriginRank) {
         final ChessPiece piece = getPieceAt(move.from());

@@ -95,6 +95,22 @@
       <scope>provided</scope>
     </dependency>
 
+    <!-- Mytems -->
+    <dependency>
+      <groupId>com.cavetale.mytems</groupId>
+      <artifactId>mytems</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- Area -->
+    <dependency>
+      <groupId>com.cavetale.area</groupId>
+      <artifactId>area</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- JUnit Testing -->
     <dependency>
       <groupId>junit</groupId>
