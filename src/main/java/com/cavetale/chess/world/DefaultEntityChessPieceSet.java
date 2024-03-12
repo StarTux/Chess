@@ -234,6 +234,7 @@ public final class DefaultEntityChessPieceSet {
         entity.setPersistent(false);
         entity.setSilent(true);
         if (entity instanceof LivingEntity living) {
+            living.setRemoveWhenFarAway(false);
             living.setCollidable(false);
         }
         if (entity instanceof Mob mob) {
