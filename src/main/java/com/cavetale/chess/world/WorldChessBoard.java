@@ -51,8 +51,10 @@ import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
+import static net.kyori.adventure.text.event.ClickEvent.openUrl;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 import static net.kyori.adventure.text.format.TextDecoration.BOLD;
+import static net.kyori.adventure.text.format.TextDecoration.UNDERLINED;
 
 /**
  * Represent one board in a world.  Boards can be asleep if their
@@ -746,6 +748,13 @@ public final class WorldChessBoard {
             announce(text(turn.getWinner().getHumanName() + " wins by timeout!", GREEN));
             break;
         default: break;
+        }
+        if (game.getTurns().size() > 3) {
+            final String url = game.toLichessAnalysisUrl();
+            announce(textOfChildren(text("Review the game here: ", WHITE),
+                                    text(url, BLUE, UNDERLINED))
+                     .hoverEvent(text(url, GRAY))
+                     .clickEvent(openUrl(url)));
         }
     }
 

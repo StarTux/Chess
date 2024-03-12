@@ -1,8 +1,11 @@
 package com.cavetale.chess.board;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.function.Consumer;
 import lombok.Data;
 
@@ -223,5 +226,17 @@ public final class ChessGame {
         }
         // End of line?
         return "";
+    }
+
+    public String toLichessAnalysisUrl() {
+        final var joiner = new StringJoiner("_", "https://lichess.org/analysis/pgn/", "");
+        for (var turn : turns) {
+            final var move = turn.getNextMove();
+            if (move == null) break;
+            final var moveString = turn.getMoveText(move);
+            final var part = URLEncoder.encode(moveString, StandardCharsets.UTF_8);
+            joiner.add(part);
+        }
+        return joiner.toString();
     }
 }
