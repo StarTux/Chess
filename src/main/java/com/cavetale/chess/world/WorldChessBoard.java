@@ -478,7 +478,7 @@ public final class WorldChessBoard {
                 final Gui gui = new Gui().size(size).title(builder.build());
                 int index = 1;
                 for (var type : ChessBoard.PROMOTION_PIECES) {
-                    gui.setItem(index, Items.text(Glyph.toGlyph(type.letter).mytems.createItemStack(), List.of(text(type.getHumanName(), GREEN))), click -> {
+                    gui.setItem(index, Items.text(Glyph.toGlyph(Character.toLowerCase(type.letter)).mytems.createItemStack(), List.of(text(type.getHumanName(), GREEN))), click -> {
                             if (!click.isLeftClick()) return;
                             player.closeInventory();
                             for (var move : list) {
@@ -516,6 +516,7 @@ public final class WorldChessBoard {
         game.setSiteName(name);
         game.setWhiteName(saveTag.getPlayer(ChessColor.WHITE).getName());
         game.setBlackName(saveTag.getPlayer(ChessColor.BLACK).getName());
+        saveTag.getPlayer(game.getCurrentBoard().getActiveColor()).startMove();
         save();
         clearPieces();
         spawnAllPieces();
@@ -542,6 +543,7 @@ public final class WorldChessBoard {
         game.setSiteName(name);
         game.setWhiteName(saveTag.getPlayer(ChessColor.WHITE).getName());
         game.setBlackName(saveTag.getPlayer(ChessColor.BLACK).getName());
+        saveTag.getPlayer(game.getCurrentBoard().getActiveColor()).startMove();
         save();
         clearPieces();
         spawnAllPieces();
