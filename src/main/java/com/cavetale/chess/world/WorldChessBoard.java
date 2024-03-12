@@ -717,14 +717,14 @@ public final class WorldChessBoard {
 
     private void onGameOver() {
         plugin().getLogger().info(getBoardId() + "\n" + game.toPgnString());
-        saveTag.setState(ChessSaveTag.ChessState.WAITING);
         final var turn = game.getCurrentTurn();
+        final var winner = turn.getWinner();
         switch (turn.getState()) {
         case CHECKMATE:
-            announce(text(turn.getWinner().getHumanName() + " wins by checkmate!", GREEN));
+            announce(text(saveTag.getPlayer(winner).getName() + " (" + winner.getHumanName() + ") wins by checkmate!", GREEN));
             break;
         case RESIGNATION:
-            announce(text(turn.getWinner().getHumanName() + " wins by resignation!", GREEN));
+            announce(text(saveTag.getPlayer(winner).getName() + " (" + winner.getHumanName() + ") wins by resignation!", GREEN));
             break;
         case STALEMATE:
             announce(text("Stalemate!", GREEN));
@@ -745,7 +745,7 @@ public final class WorldChessBoard {
             announce(text("Draw by timeout", GREEN));
             break;
         case TIMEOUT:
-            announce(text(turn.getWinner().getHumanName() + " wins by timeout!", GREEN));
+            announce(text(saveTag.getPlayer(winner).getName() + " (" + winner.getHumanName() + ") wins by timeout!", GREEN));
             break;
         default: break;
         }
@@ -756,6 +756,7 @@ public final class WorldChessBoard {
                      .hoverEvent(text(url, GRAY))
                      .clickEvent(openUrl(url)));
         }
+        saveTag.setState(ChessSaveTag.ChessState.WAITING);
     }
 
     private void updateBossBar() {
