@@ -1,7 +1,5 @@
 package com.cavetale.chess.board;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -233,9 +231,9 @@ public final class ChessGame {
         for (var turn : turns) {
             final var move = turn.getNextMove();
             if (move == null) break;
-            final var moveString = turn.getMoveText(move);
-            final var part = URLEncoder.encode(moveString, StandardCharsets.UTF_8);
-            joiner.add(part);
+            final var moveString = turn.getMoveText(move)
+                .replace("#", "");
+            joiner.add(moveString);
         }
         return joiner.toString();
     }
