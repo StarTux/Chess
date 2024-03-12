@@ -782,7 +782,7 @@ public final class WorldChessBoard {
                 bossBarText.add(text(String.format("%02d", seconds % 60), playing ? WHITE : GRAY).decoration(BOLD, playing));
             }
             if (playing) {
-                progress = (float) (player.getTimeBankMillis() / TIME_BANK);
+                progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));
             }
         }
         if (bossBar == null) {
