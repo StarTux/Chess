@@ -43,7 +43,7 @@ public final class DefaultEntityChessPieceSet {
             : Color.BLACK;
         return switch (piece.type) {
         case PAWN -> {
-            final Zombie zombie = location.getWorld().spawn(location, Zombie.class, z -> {
+            final Zombie zombie = location.getWorld().spawn(location, Zombie.class, false, z -> {
                     applyEntity(z);
                     z.setShouldBurnInDay(false);
                     z.setBaby();
@@ -55,7 +55,7 @@ public final class DefaultEntityChessPieceSet {
             yield new DefaultPiece(zombie, board, piece);
         }
         case KNIGHT -> {
-            final Horse horse = location.getWorld().spawn(location, Horse.class, h -> {
+            final Horse horse = location.getWorld().spawn(location, Horse.class, false, h -> {
                     applyEntity(h);
                     h.setColor(piece.color == ChessColor.WHITE
                                ? Horse.Color.WHITE
@@ -123,10 +123,10 @@ public final class DefaultEntityChessPieceSet {
         }
         case KING -> {
             final Entity entity = piece.color == ChessColor.WHITE
-                ? location.getWorld().spawn(location, IronGolem.class, e -> {
+                ? location.getWorld().spawn(location, IronGolem.class, false, e -> {
                         applyEntity(e);
                     })
-                : location.getWorld().spawn(location, Warden.class, e -> {
+                : location.getWorld().spawn(location, Warden.class, false, e -> {
                         applyEntity(e);
                     });
             yield new DefaultPiece(entity, board, piece);
@@ -136,7 +136,7 @@ public final class DefaultEntityChessPieceSet {
     }
 
     private static ArmorStand spawnArmorStand(Location location, Color color) {
-        return location.getWorld().spawn(location, ArmorStand.class, as -> {
+        return location.getWorld().spawn(location, ArmorStand.class, false, as -> {
                 applyEntity(as);
                 as.getEquipment().setChestplate(leatherArmor(Material.LEATHER_CHESTPLATE, color));
                 as.getEquipment().setLeggings(leatherArmor(Material.LEATHER_LEGGINGS, color));
@@ -178,7 +178,7 @@ public final class DefaultEntityChessPieceSet {
     }
 
     private static Skeleton spawnSkeleton(Location location) {
-        return location.getWorld().spawn(location, Skeleton.class, s -> {
+        return location.getWorld().spawn(location, Skeleton.class, false, s -> {
                 applyEntity(s);
                 s.setShouldBurnInDay(false);
                 s.getEquipment().setHelmet(null);
@@ -191,7 +191,7 @@ public final class DefaultEntityChessPieceSet {
     }
 
     private static WitherSkeleton spawnWitherSkeleton(Location location) {
-        return location.getWorld().spawn(location, WitherSkeleton.class, s -> {
+        return location.getWorld().spawn(location, WitherSkeleton.class, false, s -> {
                 applyEntity(s);
                 s.setShouldBurnInDay(false);
                 s.getEquipment().setHelmet(null);
@@ -204,13 +204,13 @@ public final class DefaultEntityChessPieceSet {
     }
 
     private static PolarBear spawnPolarBear(Location location) {
-        return location.getWorld().spawn(location, PolarBear.class, b -> {
+        return location.getWorld().spawn(location, PolarBear.class, false, b -> {
                 applyEntity(b);
             });
     }
 
     private static Panda spawnPanda(Location location) {
-        return location.getWorld().spawn(location, Panda.class, b -> {
+        return location.getWorld().spawn(location, Panda.class, false, b -> {
                 applyEntity(b);
                 b.setMainGene(Panda.Gene.NORMAL);
                 b.setHiddenGene(Panda.Gene.NORMAL);
