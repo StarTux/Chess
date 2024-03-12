@@ -494,7 +494,11 @@ public final class WorldChessBoard {
     private void clickMove(Player player, ChessSquare clickedSquare) {
         final var piece = game.getCurrentBoard().getPieceAt(clickedSquare);
         final var color = game.getCurrentBoard().getActiveColor();
-        if (moveFrom == null || !legalTargets.contains(clickedSquare)) {
+        if (moveFrom == clickedSquare) {
+            player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
+            moveFrom = null;
+            legalTargets.clear();
+        } else if (moveFrom == null || !legalTargets.contains(clickedSquare)) {
             if (piece == null || piece.color != color) {
                 if (moveFrom == null) {
                     clickResignMenu(player, color);
@@ -518,10 +522,6 @@ public final class WorldChessBoard {
             } else {
                 player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
             }
-        } else if (moveFrom == clickedSquare) {
-            player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
-            moveFrom = null;
-            legalTargets.clear();
         } else if (moveFrom != null && legalTargets.contains(clickedSquare)) {
             final var list = new ArrayList<ChessMove>();
             for (var move : game.getCurrentTurn().getLegalMoves().keySet()) {
