@@ -25,7 +25,7 @@ public final class Main {
             final String arg = args[i];
             switch (arg) {
             case "-f": case "--fen":
-                fenString = args[i++];
+                fenString = args[++i];
                 break;
             case "-w": case "--whitecpu":
                 whiteCPU = true;

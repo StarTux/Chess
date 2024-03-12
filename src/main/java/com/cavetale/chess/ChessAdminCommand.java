@@ -21,6 +21,9 @@ public final class ChessAdminCommand extends AbstractCommand<ChessPlugin> {
         rootNode.addChild("reset").denyTabCompletion()
             .description("Reset this board")
             .playerCaller(this::reset);
+        rootNode.addChild("move").arguments("<move>")
+            .description("Make a move")
+            .playerCaller(this::move);
     }
 
     protected void reload(CommandSender sender) {
@@ -36,5 +39,20 @@ public final class ChessAdminCommand extends AbstractCommand<ChessPlugin> {
         }
         board.reset();
         player.sendMessage(text("Board was reset: " + board.getBoardId(), YELLOW));
+    }
+
+    protected boolean move(Player player, String[] args) {
+        if (args.length != 1) return false;
+        final var board = worlds().getBoardAtPerimeter(player.getLocation());
+        if (board == null) {
+            throw new CommandWarn("There is no board nearby");
+        }
+        final var move = board.getGame().getCurrentTurn().getMoveTexts().get(args[0]);
+        if (move == null) {
+            throw new CommandWarn("Move not available: " + args[0]);
+        }
+        player.sendMessage(text("Executing move at " + board.getBoardId() + ": " + move, YELLOW));
+        board.move(move);
+        return true;
     }
 }

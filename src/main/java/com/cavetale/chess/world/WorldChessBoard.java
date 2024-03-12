@@ -330,7 +330,7 @@ public final class WorldChessBoard {
         case GAME:
             final var player = saveTag.getPlayer(game.getCurrentBoard().getActiveColor());
             if (player.isCpu()) {
-                if (player.getMoveSeconds() < 3) return;
+                if (player.getMoveSeconds() < 5) return;
                 final var move = new DummyAI().getBestMove(game);
                 move(move);
             } else {
@@ -550,22 +550,28 @@ public final class WorldChessBoard {
         player.sendMessage(text("You play as " + color.getHumanName(), GREEN));
     }
 
-    private void move(ChessMove move) {
+    public void move(ChessMove move) {
         final var board = game.getCurrentBoard();
         final var piece = board.getPieceAt(move.from());
         final var taken = board.getPieceAt(move.to());
         final var color = board.getActiveColor();
+        final var player = saveTag.getPlayer(color);
         final var moveText = game.getCurrentTurn().getMoveText(move);
         if (!game.move(move)) return;
         // Update the board
-        updateBoard(move);
-        if (game.getCurrentBoard().getCastleMove() != null) {
-            updateBoard(game.getCurrentBoard().getCastleMove());
+        final var newBoard = game.getCurrentBoard();
+        updateBoard(move, color);
+        if (newBoard.getCastleMove() != null) {
+            updateBoard(newBoard.getCastleMove(), color);
+        }
+        if (newBoard.getEnPassantTaken() != null) {
+            final var old = pieces.remove(newBoard.getEnPassantTaken());
+            if (old != null) old.remove();
         }
         // Announce
         final var turn = game.getCurrentTurn();
         final var state = turn.getState();
-        announce(text(color.getHumanName()
+        announce(text(player.getName()
                       + " moves " + piece.getType().getHumanName()
                       + " from " + move.from().getName()
                       + " to " + move.to().getName()
@@ -613,13 +619,23 @@ public final class WorldChessBoard {
         }
     }
 
-    private void updateBoard(ChessMove move) {
+    private void updateBoard(ChessMove move, ChessColor color) {
         final var takenPiece = pieces.remove(move.to());
         if (takenPiece != null) takenPiece.remove();
-        final var movedPiece = pieces.remove(move.from());
-        if (movedPiece != null) {
-            movedPiece.move(move.to());
-            pieces.put(move.to(), movedPiece);
+        if (move.promotion() == null) {
+            final var movedPiece = pieces.remove(move.from());
+            if (movedPiece != null) {
+                movedPiece.move(move.to());
+                pieces.put(move.to(), movedPiece);
+            }
+        } else {
+            final var movedPiece = pieces.remove(move.from());
+            if (movedPiece != null) {
+                movedPiece.remove();
+                final var newPiece = ChessPiece.of(color, move.promotion());
+                final var placed = pieceSet.place(this, move.to(), newPiece);
+                if (placed != null) pieces.put(move.to(), placed);
+            }
         }
     }
 }

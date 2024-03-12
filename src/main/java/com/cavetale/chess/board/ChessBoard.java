@@ -18,7 +18,9 @@ public final class ChessBoard {
     private ChessSquare enPassantSquare;
     private int halfMoveClock;
     private int fullMoveClock = 1;
+    // Past move stuff
     private ChessMove castleMove;
+    private ChessSquare enPassantTaken;
 
     public static final String FEN_START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -128,7 +130,13 @@ public final class ChessBoard {
         if (piece == null) {
             throw new IllegalArgumentException(from + " is empty!");
         }
-        final ChessPiece taken = board[to.ordinal()];
+        final int pawnDirection = getPawnDirection();
+        enPassantTaken = to == enPassantSquare
+            ? enPassantSquare.relative(0, -pawnDirection)
+            : null;
+        final ChessPiece taken = enPassantTaken != null
+            ? board[enPassantTaken.ordinal()]
+            : board[to.ordinal()];
         if (piece.color != activeColor) {
             throw new IllegalArgumentException(piece + " at " + from + " does not belong to " + activeColor);
         }
@@ -139,9 +147,11 @@ public final class ChessBoard {
         if (promotion != null) {
             setPieceAt(to, ChessPiece.of(activeColor, promotion));
         }
+        if (enPassantTaken != null) {
+            setPieceAt(enPassantTaken, null);
+        }
         // En passant detection
-        final int pawnDirection = getPawnDirection();
-        if (piece.type == ChessPieceType.PAWN && from.x == to.x && to.y + pawnDirection + pawnDirection == from.y) {
+        if (piece.type == ChessPieceType.PAWN && from.x == to.x && from.y + pawnDirection + pawnDirection == to.y) {
             enPassantSquare = from.relative(0, pawnDirection);
         } else {
             enPassantSquare = null;
@@ -224,6 +234,7 @@ public final class ChessBoard {
                 if (enPassantSquare != null
                     && (from.x + 1 == enPassantSquare.x || from.x - 1 == enPassantSquare.x)
                     && (from.y + pawnDirection == enPassantSquare.y)) {
+                    System.out.println("EN PASSANT " + enPassantSquare);
                     pawnMoves.add(enPassantSquare);
                 }
                 // Pawn promotion
@@ -475,13 +486,15 @@ public final class ChessBoard {
         // En passant
         final String enPassantString = fields[3];
         enPassantSquare = null;
-        if (enPassantString.length() != 1) {
-            throw new IllegalArgumentException("Invalid en passant value: " + enPassantString);
-        } else if (!enPassantString.equals("-")) {
+        if (enPassantString.equals("-")) {
+            enPassantSquare = null;
+        } else if (enPassantString.length() == 2) {
             enPassantSquare = ChessSquare.ofName(enPassantString);
             if (enPassantSquare == null) {
                 throw new IllegalArgumentException("Invalid en passant value: " + enPassantString);
             }
+        } else {
+            throw new IllegalArgumentException("Invalid en passant value: " + enPassantString);
         }
         // Halfmove clock
         final String halfMoveString = fields[4];
@@ -814,7 +827,9 @@ public final class ChessBoard {
 
     private String getSimpleMoveText(ChessMove move, ChessBoard nextBoard, boolean withOriginFile, boolean withOriginRank) {
         final ChessPiece piece = getPieceAt(move.from());
-        final ChessPiece taken = getPieceAt(move.to());
+        final ChessPiece taken = move.to() == enPassantSquare
+            ? getPieceAt(enPassantSquare.relative(0, -getPawnDirection()))
+            : getPieceAt(move.to());
         if (piece.type == ChessPieceType.KING && move.from() == getNaturalKing() && move.to() == getKingsideCastle()) {
             return "O-O";
         }
