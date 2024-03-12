@@ -3,6 +3,7 @@ package com.cavetale.chess.board;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import lombok.Data;
 
 @Data
@@ -112,12 +113,44 @@ public final class ChessGame {
         turns.add(currentTurn);
         currentTurn.fillCache();
         for (String line : pgn.split("\n")) {
-            if (line.startsWith("[")) continue;
+            if (line.startsWith("[")) {
+                loadIf(line, "Event", this::setEventName);
+                loadIf(line, "Site", this::setSiteName);
+                loadIf(line, "Date", string -> {
+                        String[] fields = string.split("\\.");
+                        if (fields.length != 3) return;
+                        try {
+                            int year = Integer.parseInt(fields[0]);
+                            int month = Integer.parseInt(fields[1]);
+                            int day = Integer.parseInt(fields[2]);
+                            startTime = LocalDate.of(year, month, day);
+                        } catch (NumberFormatException nfe) { }
+                    });
+                loadIf(line, "Round", string -> {
+                        try {
+                            roundNumber = Integer.parseInt(string);
+                        } catch (NumberFormatException nfe) { }
+                    });
+                loadIf(line, "White", this::setWhiteName);
+                loadIf(line, "Black", this::setBlackName);
+                continue;
+            }
             if (line.startsWith(";")) continue;
             if (line.startsWith("{")) continue;
             if (line.isEmpty()) continue;
             loadPgnLine(line);
         }
+    }
+
+    private boolean loadIf(String line, String key, Consumer<String> setter) {
+        if (!line.startsWith("[" + key)) return false;
+        if (!line.endsWith("]")) return false;
+        final int start = line.indexOf("\"");
+        if (start < 0) return false;
+        final int stop = line.lastIndexOf("\"");
+        if (stop < 0) return false;
+        setter.accept(line.substring(start + 1, stop));
+        return true;
     }
 
     private void loadPgnLine(String line) {
