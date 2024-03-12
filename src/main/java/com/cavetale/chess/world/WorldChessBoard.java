@@ -33,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Axis;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -340,6 +341,16 @@ public final class WorldChessBoard {
      */
     protected void tick() {
         switch (saveTag.getState()) {
+        case WAITING:
+            if (saveTag.getQueue().isEmpty()) return;
+            for (var iter = saveTag.getQueue().iterator(); iter.hasNext();) {
+                final var uuid = iter.next();
+                final var player = Bukkit.getPlayer(uuid);
+                if (player == null || !perimeter.contains(player.getLocation())) {
+                    iter.remove();
+                }
+            }
+            break;
         case GAME:
             updateBossBar();
             final var player = saveTag.getPlayer(game.getCurrentBoard().getActiveColor());
@@ -398,18 +409,28 @@ public final class WorldChessBoard {
     }
 
     private void clickQueue(Player player) {
-        if (saveTag.getPlayer(ChessColor.WHITE).isPlayer(player)) {
-            return;
-        }
-        if (saveTag.getPlayer(ChessColor.BLACK).isPlayer(player)) {
-            return;
-        }
         if (saveTag.getQueue().size() >= 2) {
             player.sendMessage(text("The queue is full", RED));
             return;
         }
         if (saveTag.getQueue().contains(player.getUniqueId())) {
-            player.sendMessage(text("Waiting for other player", GREEN));
+            final int size = 9;
+            final var builder = GuiOverlay.BLANK.builder(9, WHITE)
+                .title(text("Cancel?", BLACK));
+            final Gui gui = new Gui().size(size).title(builder.build());
+            gui.setItem(4, Items.text(Mytems.NO.createItemStack(), List.of(text("Cancel Request", RED))), click -> {
+                    if (!click.isLeftClick()) return;
+                    player.closeInventory();
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
+                    if (saveTag.getState() != ChessSaveTag.ChessState.WAITING
+                        || !saveTag.getQueue().contains(player.getUniqueId())) {
+                        player.sendMessage(text("Too late", RED));
+                        return;
+                    }
+                    saveTag.getQueue().remove(player.getUniqueId());
+                    player.sendMessage(text("Request cancelled", RED));
+                });
+            gui.open(player);
             return;
         }
         if (saveTag.getQueue().isEmpty()) {
@@ -420,6 +441,7 @@ public final class WorldChessBoard {
             gui.setItem(2, Items.text(Mytems.OK.createItemStack(), List.of(text("Play against other player", GREEN))), click -> {
                     if (!click.isLeftClick()) return;
                     player.closeInventory();
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
                     if (saveTag.getState() != ChessSaveTag.ChessState.WAITING
                         || saveTag.getQueue().size() >= 2
                         || saveTag.getQueue().contains(player.getUniqueId())) {
@@ -436,6 +458,7 @@ public final class WorldChessBoard {
             gui.setItem(6, Items.text(new ItemStack(Material.COMPARATOR), List.of(text("Play against Computer", GREEN))), click -> {
                     if (!click.isLeftClick()) return;
                     player.closeInventory();
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
                     if (saveTag.getState() != ChessSaveTag.ChessState.WAITING || !saveTag.getQueue().isEmpty()) {
                         player.sendMessage(text("Too late", RED));
                         return;
@@ -452,6 +475,7 @@ public final class WorldChessBoard {
             gui.setItem(4, Items.text(Mytems.OK.createItemStack(), List.of(text("Play against " + otherName, GREEN))), click -> {
                     if (!click.isLeftClick()) return;
                     player.closeInventory();
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
                     if (saveTag.getState() != ChessSaveTag.ChessState.WAITING
                         || saveTag.getQueue().size() != 1
                         || saveTag.getQueue().contains(player.getUniqueId())) {
@@ -525,6 +549,7 @@ public final class WorldChessBoard {
                     gui.setItem(index, Items.text(Glyph.toGlyph(Character.toLowerCase(type.letter)).mytems.createItemStack(), List.of(text(type.getHumanName(), GREEN))), click -> {
                             if (!click.isLeftClick()) return;
                             player.closeInventory();
+                            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
                             for (var move : list) {
                                 if (move.promotion() == type) {
                                     move(move);
@@ -766,6 +791,7 @@ public final class WorldChessBoard {
         gui.setItem(2, Items.text(Mytems.REDO.createItemStack(), List.of(text((drawOffered == color.other() ? "Agree to Draw" : "Offer Draw"), GREEN))), click -> {
                 if (!click.isLeftClick()) return;
                 player.closeInventory();
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
                 if (saveTag.getState() != ChessSaveTag.ChessState.GAME) return;
                 if (game.getCurrentTurn().getState().isGameOver()) return;
                 if (!saveTag.getPlayer(color).isPlayer(player)) return;
@@ -782,6 +808,7 @@ public final class WorldChessBoard {
         gui.setItem(6, Items.text(new ItemStack(Material.WHITE_BANNER), List.of(text("Resign", RED))), click -> {
                 if (!click.isLeftClick()) return;
                 player.closeInventory();
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
                 if (saveTag.getState() != ChessSaveTag.ChessState.GAME) return;
                 if (game.getCurrentTurn().getState().isGameOver()) return;
                 if (!saveTag.getPlayer(color).isPlayer(player)) return;
