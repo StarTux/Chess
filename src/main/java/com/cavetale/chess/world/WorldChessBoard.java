@@ -356,7 +356,7 @@ public final class WorldChessBoard {
         case GAME:
             updateBossBar();
             final var player = saveTag.getPlayer(game.getCurrentBoard().getActiveColor());
-            if (player.getTimeBankMillis() == 0L) {
+            if (player.getTimeBankMillis() <= 0L) {
                 game.getCurrentTurn().setTimeout();
                 onGameOver();
                 return;
@@ -767,7 +767,7 @@ public final class WorldChessBoard {
                 bossBarText.add(text(" | ", DARK_GRAY));
             }
             final var player = saveTag.getPlayer(color);
-            final int seconds = player.getTimeBankSeconds();
+            final int seconds = Math.max(0, player.getTimeBankSeconds());
             final int minutes = seconds / 60;
             final boolean playing = player.isPlaying();
             if (color == ChessColor.WHITE) {
