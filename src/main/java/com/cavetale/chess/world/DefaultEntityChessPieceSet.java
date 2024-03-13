@@ -13,8 +13,10 @@ import lombok.RequiredArgsConstructor;
 import org.bukkit.Axis;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Banner;
 import org.bukkit.entity.AbstractSkeleton;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
@@ -30,6 +32,7 @@ import org.bukkit.entity.WitherSkeleton;
 import org.bukkit.entity.Zombie;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 
 public final class DefaultEntityChessPieceSet {
@@ -73,9 +76,14 @@ public final class DefaultEntityChessPieceSet {
             rider.getEquipment().setItemInMainHand(piece.color == ChessColor.WHITE
                                                    ? new ItemStack(Material.IRON_SWORD)
                                                    : new ItemStack(Material.NETHERITE_SWORD));
-            rider.getEquipment().setItemInOffHand(piece.color == ChessColor.WHITE
-                                                  ? new ItemStack(Material.SHIELD)
-                                                  : new ItemStack(Material.SHIELD));
+            final var shield = new ItemStack(Material.SHIELD);
+            shield.editMeta(meta -> {
+                    if (!(meta instanceof BlockStateMeta blockStateMeta)) return;
+                    if (!(blockStateMeta.getBlockState() instanceof Banner banner)) return;
+                    banner.setBaseColor(piece.color == ChessColor.WHITE ? DyeColor.WHITE : DyeColor.BLACK);
+                    blockStateMeta.setBlockState(banner);
+                });
+            rider.getEquipment().setItemInOffHand(shield);
             yield new EntityChessPiece() {
                 @Override
                 public List<Entity> getEntities() {
