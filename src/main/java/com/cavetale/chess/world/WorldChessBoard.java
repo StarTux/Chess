@@ -762,6 +762,14 @@ public final class WorldChessBoard {
     private void updateBossBar() {
         final List<Component> bossBarText = new ArrayList<>();
         float progress = 1f;
+        int whiteScore = 0;
+        int blackScore = 0;
+        for (var entry : game.getCurrentBoard().countPieces(ChessColor.WHITE).entrySet()) {
+            whiteScore += entry.getKey().getValue() * entry.getValue();
+        }
+        for (var entry : game.getCurrentBoard().countPieces(ChessColor.BLACK).entrySet()) {
+            blackScore += entry.getKey().getValue() * entry.getValue();
+        }
         for (var color : ChessColor.values()) {
             if (color == ChessColor.BLACK) {
                 bossBarText.add(text(" | ", DARK_GRAY));
@@ -771,6 +779,9 @@ public final class WorldChessBoard {
             final int minutes = seconds / 60;
             final boolean playing = player.isPlaying();
             if (color == ChessColor.WHITE) {
+                if (whiteScore > blackScore) {
+                    bossBarText.add(text("+" + (whiteScore - blackScore) + " ", GRAY));
+                }
                 bossBarText.add(text(String.format("%02d", minutes), playing ? WHITE : GRAY).decoration(BOLD, playing));
                 bossBarText.add(text(":", GRAY));
                 bossBarText.add(text(String.format("%02d", seconds % 60), playing ? WHITE : GRAY).decoration(BOLD, playing));
@@ -780,6 +791,9 @@ public final class WorldChessBoard {
                 bossBarText.add(text(String.format("%02d", minutes), playing ? WHITE : GRAY).decoration(BOLD, playing));
                 bossBarText.add(text(":", GRAY));
                 bossBarText.add(text(String.format("%02d", seconds % 60), playing ? WHITE : GRAY).decoration(BOLD, playing));
+                if (blackScore > whiteScore) {
+                    bossBarText.add(text(" +" + (blackScore - whiteScore), GRAY));
+                }
             }
             if (playing) {
                 progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));
