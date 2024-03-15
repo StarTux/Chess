@@ -13,6 +13,7 @@ import com.cavetale.chess.net.LichessImport;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.GuiOverlay;
+import com.cavetale.core.font.Unicode;
 import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec2i;
@@ -50,6 +51,7 @@ import org.bukkit.inventory.ItemStack;
 import static com.cavetale.chess.ChessPlugin.plugin;
 import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.join;
+import static net.kyori.adventure.text.Component.space;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.JoinConfiguration.noSeparators;
@@ -784,12 +786,14 @@ public final class WorldChessBoard {
     private void updateBossBar() {
         final List<Component> bossBarText = new ArrayList<>();
         float progress = 1f;
+        final var whitePieceCount = game.getCurrentBoard().countPieces(ChessColor.WHITE);
+        final var blackPieceCount = game.getCurrentBoard().countPieces(ChessColor.BLACK);
         int whiteScore = 0;
         int blackScore = 0;
-        for (var entry : game.getCurrentBoard().countPieces(ChessColor.WHITE).entrySet()) {
+        for (var entry : whitePieceCount.entrySet()) {
             whiteScore += entry.getKey().getValue() * entry.getValue();
         }
-        for (var entry : game.getCurrentBoard().countPieces(ChessColor.BLACK).entrySet()) {
+        for (var entry : blackPieceCount.entrySet()) {
             blackScore += entry.getKey().getValue() * entry.getValue();
         }
         for (var color : ChessColor.values()) {
@@ -801,24 +805,49 @@ public final class WorldChessBoard {
             final int minutes = seconds / 60;
             final boolean playing = player.isPlaying();
             if (color == ChessColor.WHITE) {
+                if (playing) {
+                    bossBarText.add(Mytems.COLORFALL_HOURGLASS.getCurrentAnimationFrame());
+                    progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));
+                }
+                bossBarText.add(text(String.format("%2d", minutes), playing ? AQUA : GRAY));
+                bossBarText.add(text(":", GRAY));
+                bossBarText.add(text(String.format("%02d", seconds % 60), playing ? AQUA : GRAY));
+                bossBarText.add(space());
+                bossBarText.add(text(player.getName(), GRAY).decoration(BOLD, playing));
+                bossBarText.add(space());
                 if (whiteScore > blackScore) {
-                    bossBarText.add(text("+" + (whiteScore - blackScore) + " ", GRAY));
+                    bossBarText.add(text(Unicode.SUPER_PLUS.string + Unicode.superscript(whiteScore - blackScore), GRAY));
                 }
-                bossBarText.add(text(String.format("%02d", minutes), playing ? WHITE : GRAY).decoration(BOLD, playing));
-                bossBarText.add(text(":", GRAY));
-                bossBarText.add(text(String.format("%02d", seconds % 60), playing ? WHITE : GRAY).decoration(BOLD, playing));
-                bossBarText.add(text(" " + player.getName(), playing ? WHITE : GRAY).decoration(BOLD, playing));
+                for (var type : ChessPieceType.values()) {
+                    final int has = blackPieceCount.getOrDefault(type, 0);
+                    final int missing = type.getInitialAmount() - has;
+                    for (int i = 0; i < missing; i += 1) {
+                        bossBarText.add(text(ChessPiece.of(ChessColor.BLACK, type).getUnicodeSymbol(), DARK_GRAY));
+                    }
+                }
             } else {
-                bossBarText.add(text(player.getName() + " ", playing ? WHITE : GRAY).decoration(BOLD, playing));
-                bossBarText.add(text(String.format("%02d", minutes), playing ? WHITE : GRAY).decoration(BOLD, playing));
-                bossBarText.add(text(":", GRAY));
-                bossBarText.add(text(String.format("%02d", seconds % 60), playing ? WHITE : GRAY).decoration(BOLD, playing));
-                if (blackScore > whiteScore) {
-                    bossBarText.add(text(" +" + (blackScore - whiteScore), GRAY));
+                final var types = ChessPieceType.values();
+                for (int j = types.length - 1; j >= 0; j -= 1) {
+                    final var type = types[j];
+                    final int has = whitePieceCount.getOrDefault(type, 0);
+                    final int missing = type.getInitialAmount() - has;
+                    for (int i = 0; i < missing; i += 1) {
+                        bossBarText.add(text(ChessPiece.of(ChessColor.WHITE, type).getUnicodeSymbol(), GRAY));
+                    }
                 }
-            }
-            if (playing) {
-                progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));
+                if (blackScore > whiteScore) {
+                    bossBarText.add(text(Unicode.SUPER_PLUS.string + Unicode.superscript(blackScore - whiteScore), DARK_GRAY));
+                }
+                bossBarText.add(space());
+                bossBarText.add(text(player.getName(), DARK_GRAY).decoration(BOLD, playing));
+                bossBarText.add(space());
+                bossBarText.add(text(String.format("%2d", minutes), playing ? AQUA : DARK_GRAY));
+                bossBarText.add(text(":", DARK_GRAY));
+                bossBarText.add(text(String.format("%02d", seconds % 60), playing ? AQUA : DARK_GRAY));
+                if (playing) {
+                    bossBarText.add(Mytems.COLORFALL_HOURGLASS.getCurrentAnimationFrame());
+                    progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));
+                }
             }
         }
         if (bossBar == null) {
