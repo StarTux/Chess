@@ -656,7 +656,10 @@ public final class WorldChessBoard {
         if (newBoard.getEnPassantTaken() != null) {
             taken = ChessPiece.of(color.other(), ChessPieceType.PAWN);
             final var old = pieces.remove(newBoard.getEnPassantTaken());
-            if (old != null) old.remove();
+            if (old != null) {
+                old.explode();
+                old.remove();
+            }
         }
         // Announce
         final var newTurn = game.getCurrentTurn();
@@ -697,7 +700,10 @@ public final class WorldChessBoard {
 
     private void updateBoard(ChessMove move, ChessColor color) {
         final var takenPiece = pieces.remove(move.to());
-        if (takenPiece != null) takenPiece.remove();
+        if (takenPiece != null) {
+            takenPiece.explode();
+            takenPiece.remove();
+        }
         if (move.promotion() == null) {
             final var movedPiece = pieces.remove(move.from());
             if (movedPiece != null) {

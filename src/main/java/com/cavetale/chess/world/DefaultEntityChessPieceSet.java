@@ -16,6 +16,7 @@ import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.block.Banner;
 import org.bukkit.entity.AbstractSkeleton;
 import org.bukkit.entity.ArmorStand;
@@ -55,7 +56,7 @@ public final class DefaultEntityChessPieceSet {
                     z.getEquipment().setLeggings(leatherArmor(Material.LEATHER_LEGGINGS, leatherColor));
                     z.getEquipment().setBoots(leatherArmor(Material.LEATHER_BOOTS, leatherColor));
                 });
-            yield new DefaultPiece(zombie, board, piece);
+            yield new DefaultPiece(piece, zombie, board);
         }
         case KNIGHT -> {
             final Horse horse = location.getWorld().spawn(location, Horse.class, false, h -> {
@@ -84,23 +85,7 @@ public final class DefaultEntityChessPieceSet {
                     blockStateMeta.setBlockState(banner);
                 });
             rider.getEquipment().setItemInOffHand(shield);
-            yield new EntityChessPiece() {
-                @Override
-                public List<Entity> getEntities() {
-                    return List.of(horse, rider);
-                }
-
-                @Override
-                public void remove() {
-                    horse.remove();
-                    rider.remove();
-                }
-
-                @Override
-                public void move(ChessSquare square) {
-                    horse.teleport(getLocation(board, square, piece), TeleportFlag.EntityState.RETAIN_PASSENGERS);
-                }
-            };
+            yield new MountedPiece(piece, rider, horse, board);
         }
         case BISHOP -> {
             final AbstractSkeleton skeleton = piece.color == ChessColor.WHITE
@@ -110,13 +95,13 @@ public final class DefaultEntityChessPieceSet {
                                               ? Mytems.WHITE_WITCH_HAT.createItemStack()
                                               : Mytems.BLACK_WITCH_HAT.createItemStack());
             skeleton.getEquipment().setItemInMainHand(new ItemStack(Material.BOW));
-            yield new DefaultPiece(skeleton, board, piece);
+            yield new DefaultPiece(piece, skeleton, board);
         }
         case ROOK -> {
             final Entity entity = piece.color == ChessColor.WHITE
                 ? spawnPolarBear(location)
                 : spawnPanda(location);
-            yield new DefaultPiece(entity, board, piece);
+            yield new DefaultPiece(piece, entity, board);
         }
         case QUEEN -> {
             final var armorStand = spawnArmorStand(location, leatherColor);
@@ -127,7 +112,7 @@ public final class DefaultEntityChessPieceSet {
             armorStand.getEquipment().setHelmet(piece.color == ChessColor.WHITE
                                                 ? whiteQueenSkull()
                                                 : blackQueenSkull());
-            yield new DefaultPiece(armorStand, board, piece);
+            yield new DefaultPiece(piece, armorStand, board);
         }
         case KING -> {
             final Entity entity = piece.color == ChessColor.WHITE
@@ -137,7 +122,7 @@ public final class DefaultEntityChessPieceSet {
                 : location.getWorld().spawn(location, Warden.class, false, e -> {
                         applyEntity(e);
                     });
-            yield new DefaultPiece(entity, board, piece);
+            yield new DefaultPiece(piece, entity, board);
         }
         default -> throw new IllegalStateException("piece.type=" + piece.type);
         };
@@ -254,9 +239,9 @@ public final class DefaultEntityChessPieceSet {
     @Data
     @RequiredArgsConstructor
     private static final class DefaultPiece implements EntityChessPiece {
+        private final ChessPiece chessPiece;
         private final Entity entity;
         private final WorldChessBoard board;
-        private final ChessPiece piece;
 
         @Override
         public List<Entity> getEntities() {
@@ -265,12 +250,59 @@ public final class DefaultEntityChessPieceSet {
 
         @Override
         public void move(ChessSquare square) {
-            entity.teleport(getLocation(board, square, piece));
+            entity.teleport(getLocation(board, square, chessPiece));
         }
 
         @Override
         public void remove() {
             entity.remove();
         }
+
+        @Override
+        public void explode() {
+            final double height = entity.getHeight();
+            final var location = entity.getLocation().add(0.0, height * 0.5, 0.0);
+            location.getWorld().spawnParticle(Particle.BLOCK_CRACK, location, 128,
+                                              0.25, height * 0.25, 0.25, 0.0,
+                                              (chessPiece.color == ChessColor.WHITE
+                                               ? Material.WHITE_CONCRETE.createBlockData()
+                                               : Material.BLACK_CONCRETE.createBlockData()));
+        }
     };
+
+    @Data
+    @RequiredArgsConstructor
+    private static final class MountedPiece implements EntityChessPiece {
+        private final ChessPiece chessPiece;
+        private final Entity rider;
+        private final Entity mount;
+        private final WorldChessBoard board;
+
+        @Override
+        public List<Entity> getEntities() {
+            return List.of(rider, mount);
+        }
+
+        @Override
+        public void remove() {
+            rider.remove();
+            mount.remove();
+        }
+
+        @Override
+        public void move(ChessSquare square) {
+            mount.teleport(getLocation(board, square, chessPiece), TeleportFlag.EntityState.RETAIN_PASSENGERS);
+        }
+
+        @Override
+        public void explode() {
+            final double height = rider.getHeight();
+            final var location = rider.getLocation().add(0.0, height * 0.5, 0.0);
+            location.getWorld().spawnParticle(Particle.BLOCK_CRACK, location, 128,
+                                              0.25, height * 0.25, 0.25, 0.0,
+                                              (chessPiece.color == ChessColor.WHITE
+                                               ? Material.WHITE_CONCRETE.createBlockData()
+                                               : Material.BLACK_CONCRETE.createBlockData()));
+        }
+    }
 }
