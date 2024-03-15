@@ -131,7 +131,7 @@ public final class ChessBoard {
             throw new IllegalArgumentException(from + " is empty!");
         }
         final int pawnDirection = getPawnDirection();
-        enPassantTaken = to == enPassantSquare
+        enPassantTaken = piece.type == ChessPieceType.PAWN && to == enPassantSquare
             ? enPassantSquare.relative(0, -pawnDirection)
             : null;
         final ChessPiece taken = enPassantTaken != null
