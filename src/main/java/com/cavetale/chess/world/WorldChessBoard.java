@@ -91,6 +91,8 @@ public final class WorldChessBoard {
     // Move selection
     private ChessSquare moveFrom;
     private final List<ChessSquare> legalTargets = new ArrayList<>();
+    private int ticks = 0;
+    private int lastInputTicks = 0;
 
     public WorldChessBoard(final World world, final String name, final Cuboid boardArea, final Cuboid a1) {
         this.world = world;
@@ -342,6 +344,7 @@ public final class WorldChessBoard {
      * Tick this board.  Called by Worlds if this board is awake.
      */
     protected void tick() {
+        ticks += 1;
         switch (saveTag.getState()) {
         case WAITING:
             if (saveTag.getQueue().isEmpty()) return;
@@ -378,6 +381,8 @@ public final class WorldChessBoard {
     }
 
     public void onPlayerInput(Player player, ChessSquare square) {
+        if (ticks == lastInputTicks) return;
+        lastInputTicks = ticks;
         switch (saveTag.getState()) {
         case WAITING: {
             clickQueue(player);
