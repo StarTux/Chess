@@ -821,9 +821,9 @@ public final class WorldChessBoard {
                 for (var type : ChessPieceType.values()) {
                     final int has = blackPieceCount.getOrDefault(type, 0);
                     final int missing = type.getInitialAmount() - has;
-                    for (int i = 0; i < missing; i += 1) {
-                        bossBarText.add(text(ChessPiece.of(ChessColor.BLACK, type).getUnicodeSymbol(), DARK_GRAY));
-                    }
+                    if (missing == 0) continue;
+                    if (missing > 1) bossBarText.add(text(Unicode.subscript(missing), DARK_GRAY));
+                    bossBarText.add(text(ChessPiece.of(ChessColor.BLACK, type).getUnicodeSymbol(), DARK_GRAY));
                 }
             } else {
                 final var types = ChessPieceType.values();
@@ -831,9 +831,9 @@ public final class WorldChessBoard {
                     final var type = types[j];
                     final int has = whitePieceCount.getOrDefault(type, 0);
                     final int missing = type.getInitialAmount() - has;
-                    for (int i = 0; i < missing; i += 1) {
-                        bossBarText.add(text(ChessPiece.of(ChessColor.WHITE, type).getUnicodeSymbol(), GRAY));
-                    }
+                    if (missing == 0) continue;
+                    if (missing > 1) bossBarText.add(text(Unicode.subscript(missing), GRAY));
+                    bossBarText.add(text(ChessPiece.of(ChessColor.WHITE, type).getUnicodeSymbol(), GRAY));
                 }
                 if (blackScore > whiteScore) {
                     bossBarText.add(text(Unicode.SUPER_PLUS.string + Unicode.superscript(blackScore - whiteScore), DARK_GRAY));
