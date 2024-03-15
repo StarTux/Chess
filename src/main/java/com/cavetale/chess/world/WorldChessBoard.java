@@ -9,6 +9,7 @@ import com.cavetale.chess.board.ChessPiece;
 import com.cavetale.chess.board.ChessPieceType;
 import com.cavetale.chess.board.ChessSquare;
 import com.cavetale.chess.board.ChessTurnState;
+import com.cavetale.chess.net.LichessImport;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.GuiOverlay;
@@ -761,11 +762,15 @@ public final class WorldChessBoard {
         default: break;
         }
         if (game.getTurns().size() > 3) {
-            final String url = game.toLichessAnalysisUrl();
-            announce(textOfChildren(text("Review the game here: ", WHITE),
-                                    text(url, BLUE, UNDERLINED))
-                     .hoverEvent(text(url, GRAY))
-                     .clickEvent(openUrl(url)));
+            new LichessImport(game, url -> {
+                    if (url == null) {
+                        url = game.toLichessAnalysisUrl();
+                    }
+                    announce(textOfChildren(text("Review the game here: ", WHITE),
+                                            text(url, BLUE, UNDERLINED))
+                             .hoverEvent(text(url, GRAY))
+                             .clickEvent(openUrl(url)));
+            }).async();
         }
         saveTag.setState(ChessSaveTag.ChessState.WAITING);
     }
