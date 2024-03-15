@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.bossbar.BossBar;
@@ -250,7 +251,12 @@ public final class WorldChessBoard {
         saveTag = Json.load(getSaveFile(), ChessSaveTag.class, ChessSaveTag::new);
         game = new ChessGame();
         if (saveTag.getPgnString() != null) {
-            game.loadPgnString(saveTag.getPgnString());
+            try {
+                game.loadPgnString(saveTag.getPgnString());
+            } catch (IllegalArgumentException iae) {
+                plugin().getLogger().log(Level.WARNING, "load " + saveTag.getPgnString(), iae);
+                game.initialize();
+            }
         } else {
             game.initialize();
         }
