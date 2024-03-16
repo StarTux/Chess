@@ -95,7 +95,8 @@ public final class ChessBoard {
         final var king = getNaturalKing();
         return !isInCheck(king)
             && !isInCheck(king.relative(-1, 0)) && isEmpty(king.relative(-1, 0))
-            && !isInCheck(king.relative(-2, 0)) && isEmpty(king.relative(-2, 0));
+            && !isInCheck(king.relative(-2, 0)) && isEmpty(king.relative(-2, 0))
+            && isEmpty(king.relative(-3, 0));
     }
 
     public void setCanCastleKingside(boolean value) {
