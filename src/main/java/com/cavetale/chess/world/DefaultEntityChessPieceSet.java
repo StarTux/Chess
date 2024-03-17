@@ -70,7 +70,9 @@ public final class DefaultEntityChessPieceSet {
             final AbstractSkeleton rider = piece.color == ChessColor.WHITE
                 ? spawnSkeleton(location)
                 : spawnWitherSkeleton(location);
+            Worlds.worlds().setAllowVehicleEnter(true);
             horse.addPassenger(rider);
+            Worlds.worlds().setAllowVehicleEnter(false);
             rider.getEquipment().setHelmet(piece.color == ChessColor.WHITE
                                            ? new ItemStack(Material.IRON_HELMET)
                                            : new ItemStack(Material.NETHERITE_HELMET));

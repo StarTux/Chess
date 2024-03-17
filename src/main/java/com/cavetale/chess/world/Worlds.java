@@ -7,6 +7,7 @@ import com.cavetale.core.event.hud.PlayerHudEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
+import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -19,6 +20,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.event.world.WorldLoadEvent;
 import org.bukkit.event.world.WorldUnloadEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -31,6 +33,7 @@ import static com.cavetale.chess.ChessPlugin.plugin;
 public final class Worlds implements Listener {
     private final List<WorldChessBoard> boards = new ArrayList<>();
     private BukkitTask task;
+    @Setter private boolean allowVehicleEnter = false;
 
     public void enable() {
         task = Bukkit.getScheduler().runTaskTimer(plugin(), this::tick, 1L, 1L);
@@ -253,6 +256,14 @@ public final class Worlds implements Listener {
             if (!world.equals(board.getWorld())) continue;
             if (!board.getPerimeter().contains(location)) continue;
             board.onPlayerHud(event);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    private void onVehicleEnter(VehicleEnterEvent event) {
+        if (allowVehicleEnter) return;
+        if (EntityChessPiece.isChessPiece(event.getEntered())) {
+            event.setCancelled(true);
         }
     }
 }
