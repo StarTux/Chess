@@ -19,7 +19,6 @@ import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.util.Json;
 import com.cavetale.mytems.Mytems;
-import com.cavetale.mytems.item.font.Glyph;
 import com.cavetale.mytems.util.Gui;
 import com.cavetale.mytems.util.Items;
 import java.io.File;
@@ -35,6 +34,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.ComponentLike;
 import org.bukkit.Axis;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -562,7 +562,7 @@ public final class WorldChessBoard {
                 final Gui gui = new Gui().size(size).title(builder.build());
                 int index = 1;
                 for (var type : ChessBoard.PROMOTION_PIECES) {
-                    gui.setItem(index, Items.text(Glyph.toGlyph(Character.toLowerCase(type.letter)).mytems.createItemStack(), List.of(text(type.getHumanName(), GREEN))), click -> {
+                    gui.setItem(index, Items.text(ChessPiece.of(color, type).getMytems().createItemStack(), List.of(text(type.getHumanName(), GREEN))), click -> {
                             if (!click.isLeftClick()) return;
                             player.closeInventory();
                             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
@@ -680,18 +680,18 @@ public final class WorldChessBoard {
         final var newState = newTurn.getState();
         announce(textOfChildren(text(player.getName(), GREEN),
                                 text(" plays ", GRAY),
-                                text(piece.getType().getHumanName(), GREEN),
+                                piece.getMytems(),
                                 text(" from ", GRAY),
                                 text(move.from().getName(), GREEN),
                                 text(" to ", GRAY),
                                 text(move.to().getName(), GREEN),
                                 (taken != null
                                  ? textOfChildren(text(" and takes ", GRAY),
-                                                  text(taken.getType().getHumanName(), GREEN))
+                                                  taken.getMytems())
                                  : empty()),
                                 (move.promotion() != null
                                  ? textOfChildren(text(" and promotes to ", GRAY),
-                                                  text(move.promotion().getHumanName(), GREEN))
+                                                  ChessPiece.of(color, move.promotion()).getMytems())
                                  : empty()),
                                 text(" (", GRAY),
                                 text(turnNumber, GRAY),
@@ -784,7 +784,7 @@ public final class WorldChessBoard {
     }
 
     private void updateBossBar() {
-        final List<Component> bossBarText = new ArrayList<>();
+        final List<ComponentLike> bossBarText = new ArrayList<>();
         float progress = 1f;
         final var whitePieceCount = game.getCurrentBoard().countPieces(ChessColor.WHITE);
         final var blackPieceCount = game.getCurrentBoard().countPieces(ChessColor.BLACK);
@@ -814,21 +814,17 @@ public final class WorldChessBoard {
                 bossBarText.add(text(String.format("%02d", seconds % 60), playing ? AQUA : GRAY));
                 bossBarText.add(space());
                 bossBarText.add(text(player.getName(), GRAY).decoration(BOLD, playing));
-                bossBarText.add(space());
                 if (whiteScore > blackScore) {
-                    bossBarText.add(text(Unicode.SUPER_PLUS.string + Unicode.superscript(whiteScore - blackScore), GRAY));
+                    bossBarText.add(space());
+                    bossBarText.add(text(Unicode.superscript("+" + (whiteScore - blackScore)), GRAY));
                 }
                 for (var type : ChessPieceType.values()) {
                     final int has = blackPieceCount.getOrDefault(type, 0);
                     final int missing = type.getInitialAmount() - has;
                     if (missing == 0) continue;
-                    if (missing > 2) {
+                    bossBarText.add(ChessPiece.of(ChessColor.BLACK, type).getMytems());
+                    if (missing > 1) {
                         bossBarText.add(text(Unicode.subscript(missing), DARK_GRAY));
-                        bossBarText.add(text(ChessPiece.of(ChessColor.BLACK, type).getUnicodeSymbol(), DARK_GRAY));
-                    } else {
-                        for (int i = 0; i < missing; i += 1) {
-                            bossBarText.add(text(ChessPiece.of(ChessColor.BLACK, type).getUnicodeSymbol(), DARK_GRAY));
-                        }
                     }
                 }
             } else {
@@ -838,19 +834,15 @@ public final class WorldChessBoard {
                     final int has = whitePieceCount.getOrDefault(type, 0);
                     final int missing = type.getInitialAmount() - has;
                     if (missing == 0) continue;
-                    if (missing > 2) {
+                    bossBarText.add(ChessPiece.of(ChessColor.WHITE, type).getMytems());
+                    if (missing > 1) {
                         bossBarText.add(text(Unicode.subscript(missing), GRAY));
-                        bossBarText.add(text(ChessPiece.of(ChessColor.WHITE, type).getUnicodeSymbol(), GRAY));
-                    } else {
-                        for (int i = 0; i < missing; i += 1) {
-                            bossBarText.add(text(ChessPiece.of(ChessColor.WHITE, type).getUnicodeSymbol(), GRAY));
-                        }
                     }
                 }
                 if (blackScore > whiteScore) {
-                    bossBarText.add(text(Unicode.SUPER_PLUS.string + Unicode.superscript(blackScore - whiteScore), DARK_GRAY));
+                    bossBarText.add(text(Unicode.superscript("+" + (blackScore - whiteScore)), DARK_GRAY));
+                    bossBarText.add(space());
                 }
-                bossBarText.add(space());
                 bossBarText.add(text(player.getName(), DARK_GRAY).decoration(BOLD, playing));
                 bossBarText.add(space());
                 bossBarText.add(text(String.format("%2d", minutes), playing ? AQUA : DARK_GRAY));
