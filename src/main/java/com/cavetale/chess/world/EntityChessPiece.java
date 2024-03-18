@@ -6,7 +6,7 @@ import org.bukkit.persistence.PersistentDataType;
 import static com.cavetale.mytems.MytemsPlugin.namespacedKey;
 
 public interface EntityChessPiece extends WorldChessPiece {
-    List<Entity> getEntities();
+    List<? extends Entity> getEntities();
 
     @Override
     default void remove() {

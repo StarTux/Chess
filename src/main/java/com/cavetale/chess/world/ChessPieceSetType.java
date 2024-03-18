@@ -11,6 +11,9 @@ import java.util.function.Supplier;
 public enum ChessPieceSetType {
     DEFAULT_ENTITY(DefaultEntityChessPieceSet::new),
     ITEM_FRAME(ItemFrameChessPieceSet::new),
+    VERTICAL_BILLBOARD(VerticalBillboardChessPieceSet::new),
+    X_BILLBOARD(XBillboardChessPieceSet::new),
+    SCREEN_BILLBOARD(ScreenBillboardChessPieceSet::new),
     ;
 
     private final Supplier<? extends ChessPieceSet> chessPieceSetSupplier;
