@@ -18,6 +18,7 @@ public final class ChessSaveTag implements Serializable {
     private ChessPlayer white = new ChessPlayer();
     private ChessPlayer black = new ChessPlayer();
     private List<UUID> queue = new ArrayList<>();
+    private ChessPieceSetType pieceSetType;
 
     public enum ChessState {
         WAITING,

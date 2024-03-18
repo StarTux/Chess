@@ -35,10 +35,17 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import static com.cavetale.mytems.util.Entities.setTransient;
 
-public final class DefaultEntityChessPieceSet {
+public final class DefaultEntityChessPieceSet implements ChessPieceSet {
+    @Override
+    public boolean canSupport(WorldChessBoard board) {
+        return board.getFacingAxis() == Axis.Y;
+    }
+
+    @Override
     public WorldChessPiece place(WorldChessBoard board, ChessSquare square, ChessPiece piece) {
-        if (board.getFacingAxis() != Axis.Y) {
+        if (!canSupport(board)) {
             throw new IllegalArgumentException("Y axis facing required!");
         }
         final var location = getLocation(board, square, piece);
@@ -227,6 +234,7 @@ public final class DefaultEntityChessPieceSet {
     private static void applyEntity(Entity entity) {
         EntityChessPiece.markAsChessPiece(entity);
         entity.setPersistent(false);
+        setTransient(entity);
         entity.setSilent(true);
         if (entity instanceof LivingEntity living) {
             living.setRemoveWhenFarAway(false);

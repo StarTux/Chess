@@ -11,6 +11,7 @@ import lombok.Setter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -18,6 +19,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
@@ -195,13 +198,10 @@ public final class Worlds implements Listener {
         }
     }
 
-    @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGH)
-    private void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND) return;
-        final var player = event.getPlayer();
-        final var entity = event.getRightClicked();
-        if (!EntityChessPiece.isChessPiece(entity)) return;
-        event.setCancelled(true);
+    /**
+     * Player interacted with unknown chess piece.
+     */
+    private void onPlayerInput(Player player, Entity entity) {
         for (var board : boards) {
             if (!board.isAwake()) continue;
             for (var square : ChessSquare.values()) {
@@ -211,6 +211,16 @@ public final class Worlds implements Listener {
                 board.onPlayerInput(player, square);
             }
         }
+    }
+
+    @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGH)
+    private void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) return;
+        final var player = event.getPlayer();
+        final var entity = event.getRightClicked();
+        if (!EntityChessPiece.isChessPiece(entity)) return;
+        event.setCancelled(true);
+        onPlayerInput(player, entity);
     }
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGH)
@@ -234,6 +244,16 @@ public final class Worlds implements Listener {
                 if (!board.getSquares().get(square).contains(block)) continue;
                 board.onPlayerInput(player, square);
             }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    private void onHangingBreak(HangingBreakEvent event) {
+        final var hanging = event.getEntity();
+        if (!EntityChessPiece.isChessPiece(hanging)) return;
+        event.setCancelled(true);
+        if (event instanceof HangingBreakByEntityEvent event2 && event2.getRemover() instanceof Player player) {
+            onPlayerInput(player, hanging);
         }
     }
 

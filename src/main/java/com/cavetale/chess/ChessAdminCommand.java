@@ -1,6 +1,8 @@
 package com.cavetale.chess;
 
+import com.cavetale.chess.world.ChessPieceSetType;
 import com.cavetale.core.command.AbstractCommand;
+import com.cavetale.core.command.CommandArgCompleter;
 import com.cavetale.core.command.CommandWarn;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -21,6 +23,9 @@ public final class ChessAdminCommand extends AbstractCommand<ChessPlugin> {
         rootNode.addChild("reset").denyTabCompletion()
             .description("Reset this board")
             .playerCaller(this::reset);
+        rootNode.addChild("save").denyTabCompletion()
+            .description("Save this board")
+            .playerCaller(this::save);
         rootNode.addChild("move").arguments("<move>")
             .description("Make a move")
             .playerCaller(this::move);
@@ -30,6 +35,10 @@ public final class ChessAdminCommand extends AbstractCommand<ChessPlugin> {
         rootNode.addChild("fen").denyTabCompletion()
             .description("Print FEN string")
             .playerCaller(this::fen);
+        rootNode.addChild("pieces").arguments("<type>")
+            .description("Set board pieces")
+            .completers(CommandArgCompleter.enumLowerList(ChessPieceSetType.class))
+            .playerCaller(this::pieces);
     }
 
     protected void reload(CommandSender sender) {
@@ -45,6 +54,15 @@ public final class ChessAdminCommand extends AbstractCommand<ChessPlugin> {
         }
         board.reset();
         player.sendMessage(text("Board was reset: " + board.getBoardId(), YELLOW));
+    }
+
+    protected void save(Player player) {
+        final var board = worlds().getBoardAtPerimeter(player.getLocation());
+        if (board == null) {
+            throw new CommandWarn("There is no board nearby");
+        }
+        board.save();
+        player.sendMessage(text("Board saved to disk: " + board.getBoardId(), YELLOW));
     }
 
     protected boolean move(Player player, String[] args) {
@@ -82,4 +100,17 @@ public final class ChessAdminCommand extends AbstractCommand<ChessPlugin> {
                            .insertion(fen));
     }
 
+    protected boolean pieces(Player player, String[] args) {
+        if (args.length != 1) return false;
+        final var board = worlds().getBoardAtPerimeter(player.getLocation());
+        if (board == null) {
+            throw new CommandWarn("There is no board nearby");
+        }
+        final var type = CommandArgCompleter.requireEnum(ChessPieceSetType.class, args[0]);
+        if (!type.getChessPieceSet().canSupport(board)) {
+            throw new CommandWarn(type + " cannot support board " + board.getName());
+        }
+        board.setPieceSet(type);
+        return true;
+    }
 }

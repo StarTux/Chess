@@ -41,14 +41,18 @@ import org.bukkit.Chunk;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Transformation;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 import static com.cavetale.chess.ChessPlugin.plugin;
+import static com.cavetale.mytems.util.Entities.setTransient;
 import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.space;
@@ -80,6 +84,7 @@ public final class WorldChessBoard {
     private final BlockFace faceBoardY; // Up on the board
     private final int lengthBoardY;
     private final BlockFace faceBoardOrtho; // Orthogonal to the board surface
+    private final int lengthBoardOrtho;
     private final Cuboid perimeter;
     // Game
     private ChessGame game;
@@ -88,13 +93,14 @@ public final class WorldChessBoard {
     // Wake state
     private Set<Vec2i> chunks = new HashSet<>();
     private boolean awake;
-    private final DefaultEntityChessPieceSet pieceSet = new DefaultEntityChessPieceSet();
+    private ChessPieceSet pieceSet;
     private ChessSaveTag saveTag;
     private BossBar bossBar;
     private ChessColor drawOffered;
     // Move selection
     private ChessSquare moveFrom;
     private final List<ChessSquare> legalTargets = new ArrayList<>();
+    private final List<BlockDisplay> highlights = new ArrayList<>();
     private int ticks = 0;
     private int lastInputTicks = 0;
 
@@ -114,6 +120,7 @@ public final class WorldChessBoard {
             // Unless we want hanging boards some day...
             facingAxis = Axis.Y;
             faceBoardOrtho = BlockFace.UP;
+            lengthBoardOrtho = a1.getSizeY();
             // Based on the a1 square, we can determine the 2
             // remaining directions, although it is a bit of a mind
             // game.
@@ -152,6 +159,7 @@ public final class WorldChessBoard {
             faceBoardY = BlockFace.UP;
             lengthBoardX = a1.getSizeX();
             lengthBoardY = a1.getSizeY();
+            lengthBoardOrtho = a1.getSizeZ();
             if (matchDown && matchWest) {
                 faceBoardX = BlockFace.EAST;
                 faceBoardOrtho = BlockFace.SOUTH;
@@ -173,6 +181,7 @@ public final class WorldChessBoard {
             faceBoardY = BlockFace.UP;
             lengthBoardX = a1.getSizeZ();
             lengthBoardY = a1.getSizeY();
+            lengthBoardOrtho = a1.getSizeX();
             if (matchDown && matchNorth) {
                 faceBoardX = BlockFace.SOUTH;
                 faceBoardOrtho = BlockFace.WEST;
@@ -262,6 +271,9 @@ public final class WorldChessBoard {
         } else {
             game.initialize();
         }
+        pieceSet = saveTag.getPieceSetType() != null
+            ? saveTag.getPieceSetType().getChessPieceSet()
+            : null;
     }
 
     public void save() {
@@ -276,15 +288,40 @@ public final class WorldChessBoard {
         return vector.toLocation(world);
     }
 
+    public String getBoardId() {
+        return world.getName() + "/" + name;
+    }
+
+    public ChessPieceSet getPieceSet() {
+        if (pieceSet == null || !pieceSet.canSupport(this)) {
+            pieceSet = null;
+            saveTag.setPieceSetType(null);
+            for (var it : ChessPieceSetType.values()) {
+                if (it.getChessPieceSet().canSupport(this)) {
+                    pieceSet = it.getChessPieceSet();
+                    saveTag.setPieceSetType(it);
+                    break;
+                }
+            }
+            if (pieceSet == null) {
+                throw new IllegalStateException(name + ": Not a single piece set can support this");
+            }
+        }
+        return pieceSet;
+    }
+
+    public void setPieceSet(ChessPieceSetType type) {
+        saveTag.setPieceSetType(type);
+        pieceSet = type.getChessPieceSet();
+        clearPieces();
+        spawnAllPieces();
+    }
+
     public void clearPieces() {
         for (var piece : pieces.values()) {
             piece.remove();
         }
         pieces.clear();
-    }
-
-    public String getBoardId() {
-        return world.getName() + "/" + name;
     }
 
     public void spawnAllPieces() {
@@ -295,7 +332,7 @@ public final class WorldChessBoard {
             if (old != null) old.remove();
             final var piece = board.getPieceAt(square);
             if (piece == null) continue;
-            final var placed = pieceSet.place(this, square, piece);
+            final var placed = getPieceSet().place(this, square, piece);
             if (placed == null) continue;
             pieces.put(square, placed);
         }
@@ -325,6 +362,7 @@ public final class WorldChessBoard {
         awake = false;
         save();
         clearPieces();
+        clearLegalMoves();
         plugin().getLogger().info("[WorldChessBoard] " + getBoardId() + " fell asleep");
         return true;
     }
@@ -367,7 +405,8 @@ public final class WorldChessBoard {
             break;
         case GAME:
             updateBossBar();
-            final var player = saveTag.getPlayer(game.getCurrentBoard().getActiveColor());
+            final var color = game.getCurrentBoard().getActiveColor();
+            final var player = saveTag.getPlayer(color);
             if (player.getTimeBankMillis() <= 0L) {
                 game.getCurrentTurn().setTimeout();
                 onGameOver();
@@ -376,14 +415,6 @@ public final class WorldChessBoard {
                 if (player.getMoveSeconds() < 5) return;
                 final var move = new DummyAI().getBestMove(game);
                 move(move);
-            } else {
-                final var entity = player.getPlayer();
-                if (entity != null && perimeter.contains(entity.getLocation()) && !legalTargets.isEmpty()) {
-                    for (var target : legalTargets) {
-                        Location location = getCenterLocation(target);
-                        entity.spawnParticle(Particle.REDSTONE, location, 2, 0.25, 0.25, 0.25, new Particle.DustOptions(Color.RED, 1.0f));
-                    }
-                }
             }
         default: break;
         }
@@ -415,6 +446,7 @@ public final class WorldChessBoard {
         game.initialize();
         saveTag.setState(ChessSaveTag.ChessState.WAITING);
         clearPieces();
+        clearLegalMoves();
         spawnAllPieces();
     }
 
@@ -512,19 +544,17 @@ public final class WorldChessBoard {
         final var color = game.getCurrentBoard().getActiveColor();
         if (moveFrom == clickedSquare) {
             player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
-            moveFrom = null;
-            legalTargets.clear();
+            clearLegalMoves();
         } else if (moveFrom == null || !legalTargets.contains(clickedSquare)) {
             if (piece == null || piece.color != color) {
                 if (moveFrom == null) {
                     clickResignMenu(player, color);
                     player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 1.25f);
                 }
-                moveFrom = null;
-                legalTargets.clear();
+                clearLegalMoves();
                 return;
             }
-            legalTargets.clear();
+            clearLegalMoves();
             for (var move : game.getCurrentTurn().getLegalMoves().keySet()) {
                 if (move.from() != clickedSquare) continue;
                 legalTargets.add(move.to());
@@ -535,6 +565,7 @@ public final class WorldChessBoard {
             if (!legalTargets.isEmpty()) {
                 player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 1.25f);
                 moveFrom = clickedSquare;
+                fillLegalMoves(player);
             } else {
                 player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
             }
@@ -545,11 +576,8 @@ public final class WorldChessBoard {
                     list.add(move);
                 }
             }
-            moveFrom = null;
-            legalTargets.clear();
+            clearLegalMoves();
             if (list.isEmpty()) {
-                moveFrom = null;
-                legalTargets.clear();
                 player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
                 return;
             } else if (list.size() == 1) {
@@ -579,6 +607,58 @@ public final class WorldChessBoard {
                 player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 1.25f);
             }
         }
+    }
+
+    private static final Vector3f VECTOR3F_ZERO = new Vector3f(0f, 0f, 0f);
+    private static final AxisAngle4f AXISANGLE4F_ZERO = new AxisAngle4f(0f, 0f, 0f, 0f);
+
+    private void fillLegalMoves(Player player) {
+        final var translation = new Vector3f((float) Math.abs(faceBoardX.getModX() + faceBoardY.getModX()) * -0.5f,
+                                             (float) Math.abs(faceBoardX.getModY() + faceBoardY.getModY()) * -0.5f,
+                                             (float) Math.abs(faceBoardX.getModZ() + faceBoardY.getModZ()) * -0.5f);
+        final var leftRotation = AXISANGLE4F_ZERO;
+        final var rightRotation = AXISANGLE4F_ZERO;
+        final var scale = new Vector3f(facingAxis == Axis.X ? 0f : 1f,
+                                       facingAxis == Axis.Y ? 0f : 1f,
+                                       facingAxis == Axis.Z ? 0f : 1f);
+        final var transformation = new Transformation(translation, leftRotation, scale, rightRotation);
+        final var brightness = new BlockDisplay.Brightness(15, 15);
+        for (var square : legalTargets) {
+            final var cuboid = squares.get(square);
+            for (int dy = 0; dy < lengthBoardY; dy += 1) {
+                for (int dx = 0; dx < lengthBoardX; dx += 1) {
+                    final int up = lengthBoardOrtho - 1;
+                    final int x = cuboid.ax + Math.abs(dx * faceBoardX.getModX() + dy * faceBoardY.getModX() + up * faceBoardOrtho.getModX());
+                    final int y = cuboid.ay + Math.abs(dx * faceBoardX.getModY() + dy * faceBoardY.getModY() + up * faceBoardOrtho.getModY());
+                    final int z = cuboid.az + Math.abs(dx * faceBoardX.getModZ() + dy * faceBoardY.getModZ() + up * faceBoardOrtho.getModZ());
+                    final var block = world.getBlockAt(x, y, z);
+                    final var blockData = block.getBlockData();
+                    final var location = block.getLocation()
+                        .add(0.5, 0.5, 0.5)
+                        .add(faceBoardOrtho.getDirection().multiply(0.5078125));
+                    boolean willTake = game.getCurrentBoard().getPieceAt(square) != null;
+                    final var display = world.spawn(location, BlockDisplay.class, e -> {
+                            e.setPersistent(false);
+                            setTransient(e);
+                            e.setBlock(blockData);
+                            e.setTransformation(transformation);
+                            e.setGlowing(true);
+                            e.setBrightness(brightness);
+                            e.setGlowColorOverride(willTake ? Color.RED : Color.WHITE);
+                            e.setVisibleByDefault(false);
+                        });
+                    highlights.add(display);
+                    player.showEntity(plugin(), display);
+                }
+            }
+        }
+    }
+
+    private void clearLegalMoves() {
+        moveFrom = null;
+        legalTargets.clear();
+        for (var it : highlights) it.remove();
+        highlights.clear();
     }
 
     private File getSaveFile() {
@@ -729,7 +809,7 @@ public final class WorldChessBoard {
             if (movedPiece != null) {
                 movedPiece.remove();
                 final var newPiece = ChessPiece.of(color, move.promotion());
-                final var placed = pieceSet.place(this, move.to(), newPiece);
+                final var placed = getPieceSet().place(this, move.to(), newPiece);
                 if (placed != null) pieces.put(move.to(), placed);
             }
         }
@@ -769,7 +849,7 @@ public final class WorldChessBoard {
             break;
         default: break;
         }
-        if (game.getTurns().size() > 3) {
+        if (game.getTurns().size() > 5) {
             new LichessImport(game, url -> {
                     if (url == null) {
                         url = game.toLichessAnalysisUrl();
