@@ -1,6 +1,8 @@
 package com.cavetale.chess.world;
 
+import com.cavetale.chess.ai.ChessEngineType;
 import com.cavetale.chess.ai.DummyAI;
+import com.cavetale.chess.ai.StockfishAI;
 import com.cavetale.chess.board.ChessBoard;
 import com.cavetale.chess.board.ChessColor;
 import com.cavetale.chess.board.ChessGame;
@@ -29,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -103,6 +106,7 @@ public final class WorldChessBoard {
     private final List<BlockDisplay> highlights = new ArrayList<>();
     private int ticks = 0;
     private int lastInputTicks = 0;
+    private boolean cpuRequestScheduled = false;
 
     public WorldChessBoard(final World world, final String name, final Cuboid boardArea, final Cuboid a1) {
         this.world = world;
@@ -412,9 +416,35 @@ public final class WorldChessBoard {
                 onGameOver();
                 return;
             } else if (player.isCpu()) {
-                if (player.getMoveSeconds() < 5) return;
-                final var move = new DummyAI().getBestMove(game);
-                move(move);
+                switch (player.getChessEngineType()) {
+                case DUMMY: {
+                    if (player.getMoveSeconds() < 5) return;
+                    final var move = new DummyAI().getBestMove(game);
+                    move(move);
+                    break;
+                }
+                case STOCKFISH: {
+                    if (cpuRequestScheduled) return;
+                    cpuRequestScheduled = true;
+                    final String fenString = game.getCurrentBoard().toFenString();
+                    final int currentTurnNumber = game.getCurrentBoard().getFullMoveClock();
+                    final var ai = new StockfishAI(fenString, move -> {
+                            if (!game.getCurrentBoard().toFenString().equals(fenString)) return;
+                            if (move == null) {
+                                game.getCurrentTurn().resign(color);
+                                onGameOver();
+                            } else {
+                                move(move);
+                            }
+                    });
+                    ai.setSeconds(1 + currentTurnNumber / 2);
+                    ai.setSkillLevel(player.getStockfishLevel());
+                    ai.schedule();
+                    announce(text("Stockfish is thinking...", GRAY));
+                    break;
+                }
+                default: break;
+                }
             }
         default: break;
         }
@@ -486,7 +516,7 @@ public final class WorldChessBoard {
             final var builder = GuiOverlay.BLANK.builder(9, WHITE)
                 .title(text("Play Chess?", BLACK));
             final Gui gui = new Gui().size(size).title(builder.build());
-            gui.setItem(2, Items.text(Mytems.OK.createItemStack(), List.of(text("Play against other player", GREEN))), click -> {
+            gui.setItem(0, Items.text(Mytems.OK.createItemStack(), List.of(text("Play against other player", GREEN))), click -> {
                     if (!click.isLeftClick()) return;
                     player.closeInventory();
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
@@ -503,7 +533,7 @@ public final class WorldChessBoard {
                         announce(text(player.getName() + " would like to play. Click the board to accept.", GREEN));
                     }
                 });
-            gui.setItem(6, Items.text(new ItemStack(Material.COMPARATOR), List.of(text("Play against Computer", GREEN))), click -> {
+            gui.setItem(1, Items.text(new ItemStack(Material.COMPARATOR), List.of(text("Play against Computer", GREEN))), click -> {
                     if (!click.isLeftClick()) return;
                     player.closeInventory();
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
@@ -511,8 +541,35 @@ public final class WorldChessBoard {
                         player.sendMessage(text("Too late", RED));
                         return;
                     }
-                    startCPU(player);
+                    startCPU(player, ChessEngineType.DUMMY, p -> { });
                 });
+            for (int i = 0; i < 7; i += 1) {
+                final int level = i < 6 ? i : 20;
+                final Component difficultyName = switch (level) {
+                case 0 -> text("Beginner", GRAY);
+                case 1 -> text("Easy", DARK_GREEN);
+                case 2 -> text("Medium", GREEN);
+                case 3 -> text("Advanced", YELLOW);
+                case 4 -> text("Hard", GOLD);
+                case 5 -> text("Very Hard", RED);
+                case 6 -> text("Pro", LIGHT_PURPLE);
+                case 20 -> text("Impossible", DARK_PURPLE);
+                default -> text("???", GRAY);
+                };
+                final var icon = new ItemStack(i < 6 ? Material.COD : Material.COOKED_COD);
+                icon.setAmount(i + 1);
+                final List<Component> tooltip = List.of(text("Play Stockfish level", GREEN), difficultyName);
+                gui.setItem(i + 2, Items.text(icon, tooltip), click -> {
+                        if (!click.isLeftClick()) return;
+                        player.closeInventory();
+                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
+                        if (saveTag.getState() != ChessSaveTag.ChessState.WAITING || !saveTag.getQueue().isEmpty()) {
+                            player.sendMessage(text("Too late", RED));
+                            return;
+                        }
+                        startCPU(player, ChessEngineType.STOCKFISH, p -> p.setStockfishLevel(level));
+                    });
+            }
             gui.open(player);
         } else if (saveTag.getQueue().size() == 1) {
             final int size = 9;
@@ -703,13 +760,14 @@ public final class WorldChessBoard {
         }
     }
 
-    private void startCPU(Player player) {
+    private void startCPU(Player player, ChessEngineType type, Consumer<ChessSaveTag.ChessPlayer> callback) {
         if (saveTag.getState() != ChessSaveTag.ChessState.WAITING) return;
         final ChessColor color = ThreadLocalRandom.current().nextBoolean()
             ? ChessColor.WHITE
             : ChessColor.BLACK;
         saveTag.getPlayer(color).setPlayer(player);
-        saveTag.getPlayer(color.other()).setCpu(true);
+        saveTag.getPlayer(color.other()).setChessEngineType(type);
+        callback.accept(saveTag.getPlayer(color.other()));
         for (var p : saveTag.getPlayers()) {
             p.setTimeBank(TIME_BANK);
             p.setTimeIncrement(TIME_INCREMENT);
@@ -790,6 +848,7 @@ public final class WorldChessBoard {
             saveTag.getPlayer(newBoard.getActiveColor()).startMove();
         }
         drawOffered = null;
+        cpuRequestScheduled = false;
     }
 
     private void updateBoard(ChessMove move, ChessColor color) {

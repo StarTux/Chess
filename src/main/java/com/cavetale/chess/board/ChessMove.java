@@ -7,7 +7,7 @@ public record ChessMove(ChessSquare from, ChessSquare to, ChessPieceType promoti
 
     @Override
     public String toString() {
-        return from.name + to.name + (promotion != null ? "" + promotion.letter : "");
+        return from.name + to.name + (promotion != null ? "" + promotion.lowerLetter : "");
     }
 
     public static ChessMove fromString(String in) {

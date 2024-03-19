@@ -1,5 +1,6 @@
 package com.cavetale.chess.world;
 
+import com.cavetale.chess.ai.ChessEngineType;
 import com.cavetale.chess.board.ChessColor;
 import com.cavetale.core.playercache.PlayerCache;
 import java.io.Serializable;
@@ -59,7 +60,8 @@ public final class ChessSaveTag implements Serializable {
 
     @Data
     public static final class ChessPlayer {
-        private boolean cpu;
+        private ChessEngineType chessEngineType;
+        private int stockfishLevel;
         private UUID player;
         private long moveStarted;
         private long timeBank;
@@ -67,26 +69,30 @@ public final class ChessSaveTag implements Serializable {
         private boolean playing;
 
         public boolean isEmpty() {
-            return !cpu && player == null;
+            return chessEngineType == null && player == null;
         }
 
         public String getName() {
-            if (cpu) return "CPU";
-            if (player != null) return PlayerCache.nameForUuid(player);
+            if (chessEngineType != null) {
+                return chessEngineType.getDisplayName();
+            }
+            if (player != null) {
+                return PlayerCache.nameForUuid(player);
+            }
             return "N/A";
         }
 
         public boolean isPlayer(Player other) {
-            return !cpu && player != null && player.equals(other.getUniqueId());
+            return !isCpu() && player != null && player.equals(other.getUniqueId());
         }
 
         public void setPlayer(Player other) {
-            cpu = false;
+            chessEngineType = null;
             player = other.getUniqueId();
         }
 
         public void setPlayer(UUID uuid) {
-            cpu = false;
+            chessEngineType = null;
             player = uuid;
         }
 
@@ -121,6 +127,10 @@ public final class ChessSaveTag implements Serializable {
 
         public int getTimeBankSeconds() {
             return (int) (getTimeBankMillis() / 1000L);
+        }
+
+        public boolean isCpu() {
+            return chessEngineType != null;
         }
     }
 }
