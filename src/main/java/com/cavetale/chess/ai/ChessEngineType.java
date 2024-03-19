@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ChessEngineType {
-    DUMMY("CPU"),
+    DUMMY("Dummy"),
     STOCKFISH("Stockfish");
 
     private final String displayName;
