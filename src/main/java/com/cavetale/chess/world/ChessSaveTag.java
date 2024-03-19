@@ -2,6 +2,7 @@ package com.cavetale.chess.world;
 
 import com.cavetale.chess.ai.ChessEngineType;
 import com.cavetale.chess.board.ChessColor;
+import com.cavetale.core.font.Unicode;
 import com.cavetale.core.playercache.PlayerCache;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -74,6 +75,9 @@ public final class ChessSaveTag implements Serializable {
 
         public String getName() {
             if (chessEngineType != null) {
+                if (chessEngineType == ChessEngineType.STOCKFISH) {
+                    return "Stockfish" + Unicode.superscript(stockfishLevel);
+                }
                 return chessEngineType.getDisplayName();
             }
             if (player != null) {
