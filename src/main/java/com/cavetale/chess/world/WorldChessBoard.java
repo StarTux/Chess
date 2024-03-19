@@ -16,7 +16,6 @@ import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.GuiOverlay;
 import com.cavetale.core.font.Unicode;
-import com.cavetale.core.playercache.PlayerCache;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.util.Json;
@@ -516,108 +515,38 @@ public final class WorldChessBoard {
             return;
         }
         if (saveTag.getQueue().contains(player.getUniqueId())) {
-            final int size = 9;
-            final var builder = GuiOverlay.BLANK.builder(9, WHITE)
-                .title(text("Cancel?", BLACK));
-            final Gui gui = new Gui().size(size).title(builder.build());
-            gui.setItem(4, Items.text(Mytems.NO.createItemStack(), List.of(text("Cancel Request", RED))), click -> {
-                    if (!click.isLeftClick()) return;
-                    player.closeInventory();
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-                    if (saveTag.getState() != ChessSaveTag.ChessState.WAITING
-                        || !saveTag.getQueue().contains(player.getUniqueId())) {
-                        player.sendMessage(text("Too late", RED));
-                        return;
-                    }
-                    saveTag.getQueue().remove(player.getUniqueId());
-                    player.sendMessage(text("Request cancelled", RED));
-                });
-            gui.open(player);
+            openCancelMenu(player);
             return;
         }
         if (saveTag.getQueue().isEmpty()) {
-            final int size = 9;
-            final var builder = GuiOverlay.BLANK.builder(9, WHITE)
-                .title(text("Play Chess?", BLACK));
-            final Gui gui = new Gui().size(size).title(builder.build());
-            gui.setItem(0, Items.text(Mytems.OK.createItemStack(), List.of(text("Play against other player", GREEN))), click -> {
-                    if (!click.isLeftClick()) return;
-                    player.closeInventory();
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-                    if (saveTag.getState() != ChessSaveTag.ChessState.WAITING
-                        || saveTag.getQueue().size() >= 2
-                        || saveTag.getQueue().contains(player.getUniqueId())) {
-                        player.sendMessage(text("Too late", RED));
-                        return;
-                    }
-                    saveTag.getQueue().add(player.getUniqueId());
-                    if (saveTag.getQueue().size() == 2) {
-                        startQueue();
-                    } else {
-                        announce(text(player.getName() + " would like to play. Click the board to accept.", GREEN));
-                    }
-                });
-            gui.setItem(1, Items.text(new ItemStack(Material.COMPARATOR), List.of(text("Play against Computer", GREEN))), click -> {
-                    if (!click.isLeftClick()) return;
-                    player.closeInventory();
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-                    if (saveTag.getState() != ChessSaveTag.ChessState.WAITING || !saveTag.getQueue().isEmpty()) {
-                        player.sendMessage(text("Too late", RED));
-                        return;
-                    }
-                    startCPU(player, ChessEngineType.DUMMY, p -> { });
-                });
-            for (int i = 0; i < 7; i += 1) {
-                final int level = i < 6 ? i : 20;
-                final Component difficultyName = switch (level) {
-                case 0 -> text("Beginner", GRAY);
-                case 1 -> text("Easy", DARK_GREEN);
-                case 2 -> text("Medium", GREEN);
-                case 3 -> text("Advanced", YELLOW);
-                case 4 -> text("Hard", GOLD);
-                case 5 -> text("Very Hard", RED);
-                case 6 -> text("Pro", LIGHT_PURPLE);
-                case 20 -> text("Impossible", DARK_PURPLE);
-                default -> text("???", GRAY);
-                };
-                final var icon = new ItemStack(i < 6 ? Material.COD : Material.COOKED_COD);
-                icon.setAmount(i + 1);
-                final List<Component> tooltip = List.of(text("Play against Stockfish", GREEN), difficultyName);
-                gui.setItem(i + 2, Items.text(icon, tooltip), click -> {
-                        if (!click.isLeftClick()) return;
-                        player.closeInventory();
-                        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-                        if (saveTag.getState() != ChessSaveTag.ChessState.WAITING || !saveTag.getQueue().isEmpty()) {
-                            player.sendMessage(text("Too late", RED));
-                            return;
-                        }
-                        startCPU(player, ChessEngineType.STOCKFISH, p -> p.setStockfishLevel(level));
-                    });
-            }
-            gui.open(player);
+            openQueueMenu(player);
         } else if (saveTag.getQueue().size() == 1) {
-            final int size = 9;
-            final var builder = GuiOverlay.BLANK.builder(9, WHITE)
-                .title(text("Play Chess?", BLACK));
-            final Gui gui = new Gui().size(size).title(builder.build());
-            final var otherName = PlayerCache.nameForUuid(saveTag.getQueue().get(0));
-            gui.setItem(4, Items.text(Mytems.OK.createItemStack(), List.of(text("Play against " + otherName, GREEN))), click -> {
-                    if (!click.isLeftClick()) return;
-                    player.closeInventory();
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-                    if (saveTag.getState() != ChessSaveTag.ChessState.WAITING
-                        || saveTag.getQueue().size() != 1
-                        || saveTag.getQueue().contains(player.getUniqueId())) {
-                        player.sendMessage(text("Too late", RED));
-                        return;
-                    }
-                    saveTag.getQueue().add(player.getUniqueId());
-                    if (saveTag.getQueue().size() == 2) {
-                        startQueue();
-                    }
-                });
-            gui.open(player);
+            new ChessAcceptMenu(player, this, saveTag.getQueue().get(0)).open();
         }
+    }
+
+    private void openQueueMenu(Player player) {
+        new ChessQueueMenu(player, this).open();
+    }
+
+    private void openCancelMenu(Player player) {
+        final int size = 9;
+        final var builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
+            .title(text("Cancel?", WHITE));
+        final Gui gui = new Gui().size(size).title(builder.build());
+        gui.setItem(4, Items.text(Mytems.NO.createItemStack(), List.of(text("Cancel Request", RED))), click -> {
+                if (!click.isLeftClick()) return;
+                player.closeInventory();
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
+                if (saveTag.getState() != ChessSaveTag.ChessState.WAITING
+                    || !saveTag.getQueue().contains(player.getUniqueId())) {
+                    player.sendMessage(text("Too late", RED));
+                    return;
+                }
+                saveTag.getQueue().remove(player.getUniqueId());
+                player.sendMessage(text("Request cancelled", RED));
+            });
+        gui.open(player);
     }
 
     private void clickMove(Player player, ChessSquare clickedSquare) {
@@ -666,8 +595,8 @@ public final class WorldChessBoard {
             } else {
                 // Promotion
                 final int size = 9;
-                final var builder = GuiOverlay.BLANK.builder(9, WHITE)
-                    .title(text("Promotion", BLACK));
+                final var builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
+                    .title(text("Promotion", WHITE));
                 final Gui gui = new Gui().size(size).title(builder.build());
                 int index = 1;
                 for (var type : ChessBoard.PROMOTION_PIECES) {
@@ -752,12 +681,34 @@ public final class WorldChessBoard {
     public static final long TIME_BANK = 1000L * 60L * 15L;
     public static final long TIME_INCREMENT = 1000L * 10L;
 
+    protected boolean addToQueue(Player player, ChessColor color) {
+        if (saveTag.getState() != ChessSaveTag.ChessState.WAITING) return false;
+        if (saveTag.getQueue().size() >= 2) return false;
+        if (saveTag.getQueue().isEmpty()) {
+            saveTag.setQueueColor(color);
+        } else if (saveTag.getQueueColor() == null && color != null) {
+            saveTag.setQueueColor(color.other());
+        }
+        saveTag.getQueue().add(player.getUniqueId());
+        if (saveTag.getQueue().size() == 2) {
+            startQueue();
+        } else {
+            announce(text(player.getName() + " would like to play. Click the board to accept.", GREEN));
+        }
+        return true;
+    }
+
     private void startQueue() {
         if (saveTag.getState() != ChessSaveTag.ChessState.WAITING) return;
         if (saveTag.getQueue().size() != 2) return;
-        final ChessColor color = ThreadLocalRandom.current().nextBoolean()
-            ? ChessColor.WHITE
-            : ChessColor.BLACK;
+        final ChessColor color;
+        if (saveTag.getQueueColor() != null) {
+            color = saveTag.getQueueColor();
+        } else {
+            color = ThreadLocalRandom.current().nextBoolean()
+                ? ChessColor.WHITE
+                : ChessColor.BLACK;
+        }
         saveTag.getPlayer(color).setPlayer(saveTag.getQueue().get(0));
         saveTag.getPlayer(color.other()).setPlayer(saveTag.getQueue().get(1));
         for (var p : saveTag.getPlayers()) {
@@ -776,19 +727,24 @@ public final class WorldChessBoard {
         spawnAllPieces();
         final Player white = saveTag.getWhite().getPlayer();
         if (white != null) {
-            white.sendMessage(text("You play as White", GREEN));
+            white.sendMessage(textOfChildren(Mytems.WHITE_QUEEN, text("You play as White", GRAY)));
         }
         final Player black = saveTag.getBlack().getPlayer();
         if (black != null) {
-            black.sendMessage(text("You play as Black", GREEN));
+            black.sendMessage(textOfChildren(Mytems.BLACK_QUEEN, text("You play as Black", DARK_GRAY)));
         }
     }
 
-    private void startCPU(Player player, ChessEngineType type, Consumer<ChessSaveTag.ChessPlayer> callback) {
+    protected void startCPU(Player player, ChessColor chosenColor, ChessEngineType type, Consumer<ChessSaveTag.ChessPlayer> callback) {
         if (saveTag.getState() != ChessSaveTag.ChessState.WAITING) return;
-        final ChessColor color = ThreadLocalRandom.current().nextBoolean()
-            ? ChessColor.WHITE
-            : ChessColor.BLACK;
+        final ChessColor color;
+        if (chosenColor != null) {
+            color = chosenColor;
+        } else {
+            color = ThreadLocalRandom.current().nextBoolean()
+                ? ChessColor.WHITE
+                : ChessColor.BLACK;
+        }
         saveTag.getPlayer(color).setPlayer(player);
         saveTag.getPlayer(color.other()).setChessEngineType(type);
         callback.accept(saveTag.getPlayer(color.other()));
@@ -806,7 +762,8 @@ public final class WorldChessBoard {
         save();
         clearPieces();
         spawnAllPieces();
-        player.sendMessage(text("You play as " + color.getHumanName(), GREEN));
+        player.sendMessage(textOfChildren(ChessPiece.of(color, ChessPieceType.QUEEN).getMytems(),
+                                          text("You play as " + color.getHumanName(), (color == ChessColor.WHITE ? GRAY : DARK_GRAY))));
     }
 
     public void move(ChessMove move) {
@@ -1027,8 +984,8 @@ public final class WorldChessBoard {
 
     private void clickResignMenu(Player player, ChessColor color) {
         final int size = 9;
-        final var builder = GuiOverlay.BLANK.builder(9, WHITE)
-            .title(text("End the Game?", BLACK));
+        final var builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
+            .title(text("End the Game?", WHITE));
         final Gui gui = new Gui().size(size).title(builder.build());
         gui.setItem(2, Items.text(Mytems.REDO.createItemStack(), List.of(text((drawOffered == color.other() ? "Agree to Draw" : "Offer Draw"), GREEN))), click -> {
                 if (!click.isLeftClick()) return;

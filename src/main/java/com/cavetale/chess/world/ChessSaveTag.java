@@ -20,6 +20,7 @@ public final class ChessSaveTag implements Serializable {
     private ChessPlayer white = new ChessPlayer();
     private ChessPlayer black = new ChessPlayer();
     private List<UUID> queue = new ArrayList<>();
+    private ChessColor queueColor = null;
     private ChessPieceSetType pieceSetType;
 
     public enum ChessState {
@@ -43,9 +44,11 @@ public final class ChessSaveTag implements Serializable {
             white = new ChessPlayer();
             black = new ChessPlayer();
             queue.clear();
+            queueColor = null;
             break;
         case GAME:
             queue.clear();
+            queueColor = null;
             break;
         default: break;
         }
