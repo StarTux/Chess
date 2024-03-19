@@ -225,25 +225,47 @@ public final class Worlds implements Listener {
 
     @EventHandler(ignoreCancelled = false, priority = EventPriority.HIGH)
     private void onPlayerInteract(PlayerInteractEvent event) {
+        final var player = event.getPlayer();
+        if (event.getHand() != EquipmentSlot.HAND) return;
         switch (event.getAction()) {
         case RIGHT_CLICK_BLOCK:
-        case LEFT_CLICK_BLOCK:
-            break;
-        default: return;
-        }
-        if (event.getHand() != EquipmentSlot.HAND) return;
-        final var player = event.getPlayer();
-        final var block = event.getClickedBlock();
-        final var world = block.getWorld();
-        for (var board : boards) {
-            if (!board.isAwake()) continue;
-            if (!world.equals(board.getWorld())) continue;
-            if (!board.getBoardArea().contains(block)) continue;
-            event.setCancelled(true);
-            for (var square : ChessSquare.values()) {
-                if (!board.getSquares().get(square).contains(block)) continue;
-                board.onPlayerInput(player, square);
+        case LEFT_CLICK_BLOCK: {
+            final var block = event.getClickedBlock();
+            final var world = block.getWorld();
+            for (var board : boards) {
+                if (!board.isAwake()) continue;
+                if (!world.equals(board.getWorld())) continue;
+                if (!board.getBoardArea().contains(block)) continue;
+                event.setCancelled(true);
+                for (var square : ChessSquare.values()) {
+                    if (!board.getSquares().get(square).contains(block)) continue;
+                    board.onPlayerInput(player, square);
+                    break;
+                }
             }
+            break;
+        }
+        case RIGHT_CLICK_AIR:
+        case LEFT_CLICK_AIR: {
+            final var location = player.getLocation();
+            final var world = location.getWorld();
+            for (var board : boards) {
+                if (!board.isAwake()) continue;
+                if (!world.equals(board.getWorld())) continue;
+                if (!board.getPerimeter().contains(location)) continue;
+                final var block = player.getTargetBlockExact(64);
+                if (block == null) continue;
+                for (var square : ChessSquare.values()) {
+                    if (!board.getSquares().get(square).contains(block)) continue;
+                    if (board.onPlayerRemoteInput(player, square)) {
+                        event.setCancelled(true);
+                    }
+                    break;
+                }
+            }
+            break;
+        }
+        default: return;
         }
     }
 

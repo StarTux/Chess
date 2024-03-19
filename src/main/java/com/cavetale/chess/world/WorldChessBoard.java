@@ -471,6 +471,30 @@ public final class WorldChessBoard {
         }
     }
 
+    /**
+     * Input is more remote than above, so we return false when they
+     * are not playing so it doesn't have to be needlessly cancelled.
+     */
+    public boolean onPlayerRemoteInput(Player player, ChessSquare square) {
+        if (ticks == lastInputTicks) return false;
+        lastInputTicks = ticks;
+        switch (saveTag.getState()) {
+        case GAME: {
+            final var color = game.getCurrentBoard().getActiveColor();
+            if (saveTag.getPlayer(color).isPlayer(player)) {
+                clickMove(player, square);
+                return true;
+            } else if (saveTag.getPlayer(color.other()).isPlayer(player)) {
+                clickResignMenu(player, color.other());
+                return true;
+            } else {
+                return false;
+            }
+        }
+        default: return false;
+        }
+    }
+
     public void reset() {
         game = new ChessGame();
         game.initialize();
