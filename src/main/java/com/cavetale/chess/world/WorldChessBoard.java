@@ -558,7 +558,7 @@ public final class WorldChessBoard {
                 };
                 final var icon = new ItemStack(i < 6 ? Material.COD : Material.COOKED_COD);
                 icon.setAmount(i + 1);
-                final List<Component> tooltip = List.of(text("Play Stockfish level", GREEN), difficultyName);
+                final List<Component> tooltip = List.of(text("Play against Stockfish", GREEN), difficultyName);
                 gui.setItem(i + 2, Items.text(icon, tooltip), click -> {
                         if (!click.isLeftClick()) return;
                         player.closeInventory();
