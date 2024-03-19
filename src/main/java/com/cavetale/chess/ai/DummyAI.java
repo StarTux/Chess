@@ -124,10 +124,14 @@ public final class DummyAI {
                 takeScore -= piece.getType().getValue();
             }
             // Castle
-            castleScore = (board.canCastleKingside(color) ? 1 : 0)
-                - (board.canCastleKingside(enemy) ? 1 : 0)
-                + (board.canCastleQueenside(color) ? 1 : 0)
-                - (board.canCastleQueenside(enemy) ? 1 : 0);
+            if (board.getCastleMove() != null) {
+                castleScore = 2;
+            } else {
+                castleScore = (board.canCastleKingside(color) ? 1 : 0)
+                    - (board.canCastleKingside(enemy) ? 1 : 0)
+                    + (board.canCastleQueenside(color) ? 1 : 0)
+                    - (board.canCastleQueenside(enemy) ? 1 : 0);
+            }
             // Final score
             total = controlScore * 3 - counterControlScore
                 + (attackScore - counterAttackScore) * 10
