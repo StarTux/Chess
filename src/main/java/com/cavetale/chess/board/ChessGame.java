@@ -14,7 +14,7 @@ public final class ChessGame {
     private LocalDate startTime = LocalDate.now();
     private String eventName = "Cavetale Chess";
     private String siteName = "cavetale.com";
-    private int roundNumber = 1;
+    private int roundNumber = 0;
     private String whiteName = "Unknown";
     private String blackName = "Unknown";
 
@@ -76,7 +76,7 @@ public final class ChessGame {
         sb.append("[Event \"" + escape(eventName) + "\"]\n");
         sb.append("[Site \"" + escape(siteName) + "\"]\n");
         sb.append(String.format("[Date \"%04d.%02d.%02d\"]\n", startTime.getYear(), startTime.getMonthValue(), startTime.getDayOfMonth()));
-        sb.append("[Round \"" + roundNumber + "\"]\n");
+        sb.append("[Round \"" + (roundNumber > 0 ? "" + roundNumber : "-") + "\"]\n");
         sb.append("[White \"" + escape(whiteName) + "\"]\n");
         sb.append("[Black \"" + escape(blackName) + "\"]\n");
         sb.append("[Result \"" + getResultPgn() + "\"]\n");
@@ -100,9 +100,9 @@ public final class ChessGame {
         } else if (currentTurn.getState().isDraw()) {
             return "1/2-1/2";
         } else {
-            return currentTurn.getBoard().getActiveColor() == ChessColor.WHITE
-                ? "0-1"
-                : "1-0";
+            return currentTurn.getWinner() == ChessColor.WHITE
+                ? "1-0"
+                : "0-1";
         }
     }
 
@@ -128,9 +128,13 @@ public final class ChessGame {
                         } catch (NumberFormatException nfe) { }
                     });
                 loadIf(line, "Round", string -> {
-                        try {
-                            roundNumber = Integer.parseInt(string);
-                        } catch (NumberFormatException nfe) { }
+                        if (string.equals("-")) {
+                            roundNumber = 0;
+                        } else {
+                            try {
+                                roundNumber = Integer.parseInt(string);
+                            } catch (NumberFormatException nfe) { }
+                        }
                     });
                 loadIf(line, "White", this::setWhiteName);
                 loadIf(line, "Black", this::setBlackName);
