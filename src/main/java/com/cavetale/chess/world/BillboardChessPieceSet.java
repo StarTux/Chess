@@ -43,7 +43,7 @@ public abstract class BillboardChessPieceSet implements ChessPieceSet {
     }
 
     public static Location getLocation(WorldChessBoard board, ChessSquare square) {
-        return board.getCenterLocation(square);
+        return board.getCenterLocation(square).add(0.0, 0.015625, 0.0);
     }
 
     @Data
