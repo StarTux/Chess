@@ -898,6 +898,7 @@ public final class WorldChessBoard {
                                             text(url, BLUE, UNDERLINED))
                              .hoverEvent(text(url, GRAY))
                              .clickEvent(openUrl(url)));
+                    plugin().getLogger().info(url);
             }).async();
         }
         saveTag.setState(ChessSaveTag.ChessState.WAITING);
