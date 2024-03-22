@@ -433,10 +433,14 @@ public final class WorldChessBoard {
                                 game.getCurrentTurn().resign(color);
                                 onGameOver();
                             } else {
-                                move(move);
+                                if (!move(move)) {
+                                    plugin().getLogger().warning(getBoardId() + " Stockfish suggests illegal move: "
+                                                                 + move + " for " + game.getCurrentBoard().toFenString());
+                                    game.getCurrentTurn().resign(color);
+                                }
                             }
                     });
-                    ai.setSeconds(1 + currentTurnNumber / 2);
+                    ai.setSeconds(Math.max(10, Math.min(30, 5 + currentTurnNumber / 2)));
                     ai.setSkillLevel(player.getStockfishLevel());
                     ai.schedule();
                     announce(text("Stockfish is thinking...", GRAY));
@@ -766,7 +770,7 @@ public final class WorldChessBoard {
                                           text("You play as " + color.getHumanName(), (color == ChessColor.WHITE ? GRAY : DARK_GRAY))));
     }
 
-    public void move(ChessMove move) {
+    public boolean move(ChessMove move) {
         final var board = game.getCurrentBoard();
         final var turnNumber = board.getFullMoveClock();
         final var piece = board.getPieceAt(move.from());
@@ -774,7 +778,7 @@ public final class WorldChessBoard {
         final var color = board.getActiveColor();
         final var player = saveTag.getPlayer(color);
         final var moveText = game.getCurrentTurn().getMoveText(move);
-        if (!game.move(move)) return;
+        if (!game.move(move)) return false;
         // Update the board
         final var newBoard = game.getCurrentBoard();
         updateBoard(move, color);
@@ -830,6 +834,7 @@ public final class WorldChessBoard {
         }
         drawOffered = null;
         cpuRequestScheduled = false;
+        return true;
     }
 
     private void updateBoard(ChessMove move, ChessColor color) {
