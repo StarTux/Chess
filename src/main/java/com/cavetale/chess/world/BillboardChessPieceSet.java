@@ -33,7 +33,7 @@ public abstract class BillboardChessPieceSet implements ChessPieceSet {
                 final float scalef = sy * (float) Math.min(board.getLengthBoardX(), board.getLengthBoardY());
                 final var translation = new Vector3f(0f, 0.5f * scalef, 0f);
                 final var leftRotation = WorldChessBoard.AXISANGLE4F_ZERO;
-                final var rightRotation = WorldChessBoard.AXISANGLE4F_ZERO;
+                final var rightRotation = WorldChessBoard.AXISANGLE4F_FLIP;
                 final var scale = new Vector3f(scalef, scalef, 0f);
                 e.setTransformation(new Transformation(translation, leftRotation, scale, rightRotation));
                 callback.accept(e);

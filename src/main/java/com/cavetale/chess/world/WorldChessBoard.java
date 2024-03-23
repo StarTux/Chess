@@ -625,6 +625,7 @@ public final class WorldChessBoard {
 
     public static final Vector3f VECTOR3F_ZERO = new Vector3f(0f, 0f, 0f);
     public static final AxisAngle4f AXISANGLE4F_ZERO = new AxisAngle4f(0f, 0f, 0f, 0f);
+    public static final AxisAngle4f AXISANGLE4F_FLIP = new org.joml.AxisAngle4f((float) Math.PI, 0f, 1f, 0f);
 
     private void fillLegalMoves(Player player) {
         final var translation = new Vector3f((float) Math.abs(faceBoardX.getModX() + faceBoardY.getModX()) * -0.5f,
