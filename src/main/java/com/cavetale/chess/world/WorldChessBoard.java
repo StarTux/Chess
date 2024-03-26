@@ -440,7 +440,7 @@ public final class WorldChessBoard {
                                 }
                             }
                     });
-                    ai.setSeconds(Math.max(10, Math.min(30, 5 + currentTurnNumber / 2)));
+                    ai.setSeconds(Math.max(5, Math.min(15, 5 + currentTurnNumber / 2)));
                     ai.setSkillLevel(player.getStockfishLevel());
                     ai.schedule();
                     announce(text("Stockfish is thinking...", GRAY));
