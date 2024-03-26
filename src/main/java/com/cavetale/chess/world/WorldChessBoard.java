@@ -43,6 +43,7 @@ import org.bukkit.Chunk;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
@@ -408,6 +409,7 @@ public final class WorldChessBoard {
             break;
         case GAME:
             updateBossBar();
+            showPreviousMove();
             final var color = game.getCurrentBoard().getActiveColor();
             final var player = saveTag.getPlayer(color);
             if (player.getTimeBankMillis() <= 0L) {
@@ -986,6 +988,24 @@ public final class WorldChessBoard {
         } else {
             bossBar.name(join(noSeparators(), bossBarText));
             bossBar.progress(progress);
+        }
+    }
+
+    private void showPreviousMove() {
+        final ChessMove move = game.getCurrentTurn().getPreviousMove();
+        if (move == null) return;
+        final Location from = getCenterLocation(move.from()).add(faceBoardOrtho.getDirection().multiply(0.015625));
+        final Location to = getCenterLocation(move.to()).add(faceBoardOrtho.getDirection().multiply(0.015625));
+        final double d = from.distance(to);
+        final int steps = (int) Math.round(d * 4.0);
+        if (steps == 0) return; // Impossible
+        for (int i = 0; i <= steps; i += 1) {
+            final double a = (double) i / (double) steps;
+            final double b = 1.0 - a;
+            final Location location = from.toVector().multiply(a)
+                .add(to.toVector().multiply(b))
+                .toLocation(world);
+            world.spawnParticle(Particle.END_ROD, location, 1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 
