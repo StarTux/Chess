@@ -1018,18 +1018,19 @@ public final class WorldChessBoard {
     private void showPreviousMove() {
         final ChessMove move = game.getCurrentTurn().getPreviousMove();
         if (move == null) return;
-        final Location from = getCenterLocation(move.from()).add(faceBoardOrtho.getDirection().multiply(0.015625));
-        final Location to = getCenterLocation(move.to()).add(faceBoardOrtho.getDirection().multiply(0.015625));
+        final var up = faceBoardOrtho.getDirection().multiply(0.125);
+        final Location from = getCenterLocation(move.from()).add(up);
+        final Location to = getCenterLocation(move.to()).add(up);
         final double d = from.distance(to);
-        final int steps = (int) Math.round(d * 4.0);
+        final int steps = (int) Math.round(d * 2.0);
         if (steps == 0) return; // Impossible
-        for (int i = 0; i <= steps; i += 1) {
+        for (int i = 0; i < steps; i += 1) {
             final double a = (double) i / (double) steps;
             final double b = 1.0 - a;
-            final Location location = from.toVector().multiply(a)
-                .add(to.toVector().multiply(b))
+            final Location location = from.toVector().multiply(b)
+                .add(to.toVector().multiply(a))
                 .toLocation(world);
-            world.spawnParticle(Particle.END_ROD, location, 1, 0.0, 0.0, 0.0, 0.0);
+            world.spawnParticle(Particle.WAX_ON, location, 1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 
