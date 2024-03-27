@@ -704,9 +704,6 @@ public final class WorldChessBoard {
         return new File(folder, name + ".json");
     }
 
-    public static final long TIME_BANK = 1000L * 60L * 15L;
-    public static final long TIME_INCREMENT = 1000L * 10L;
-
     protected boolean addToQueue(Player player, ChessColor color) {
         if (saveTag.getState() != ChessSaveTag.ChessState.WAITING) return false;
         if (saveTag.getQueue().size() >= 2) return false;
@@ -738,8 +735,8 @@ public final class WorldChessBoard {
         saveTag.getPlayer(color).setPlayer(saveTag.getQueue().get(0));
         saveTag.getPlayer(color.other()).setPlayer(saveTag.getQueue().get(1));
         for (var p : saveTag.getPlayers()) {
-            p.setTimeBank(TIME_BANK);
-            p.setTimeIncrement(TIME_INCREMENT);
+            p.setTimeBank(saveTag.getTimeBank());
+            p.setTimeIncrement(saveTag.getTimeIncrement());
         }
         saveTag.setState(ChessSaveTag.ChessState.GAME);
         game = new ChessGame();
@@ -775,8 +772,8 @@ public final class WorldChessBoard {
         saveTag.getPlayer(color.other()).setChessEngineType(type);
         callback.accept(saveTag.getPlayer(color.other()));
         for (var p : saveTag.getPlayers()) {
-            p.setTimeBank(TIME_BANK);
-            p.setTimeIncrement(TIME_INCREMENT);
+            p.setTimeBank(saveTag.getTimeBank());
+            p.setTimeIncrement(saveTag.getTimeIncrement());
         }
         saveTag.setState(ChessSaveTag.ChessState.GAME);
         game = new ChessGame();
@@ -963,7 +960,7 @@ public final class WorldChessBoard {
             if (color == ChessColor.WHITE) {
                 if (playing) {
                     bossBarText.add(Mytems.COLORFALL_HOURGLASS.getCurrentAnimationFrame());
-                    progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));
+                    progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) saveTag.getTimeBank()));
                 }
                 bossBarText.add(text(String.format("%2d", minutes), textColor));
                 bossBarText.add(text(":", textColor));
@@ -1006,7 +1003,7 @@ public final class WorldChessBoard {
                 bossBarText.add(text(String.format("%02d", seconds % 60), textColor));
                 if (playing) {
                     bossBarText.add(Mytems.COLORFALL_HOURGLASS.getCurrentAnimationFrame());
-                    progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));
+                    progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) saveTag.getTimeBank()));
                 }
             }
         }

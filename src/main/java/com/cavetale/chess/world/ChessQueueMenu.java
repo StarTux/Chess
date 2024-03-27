@@ -16,6 +16,7 @@ import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import static net.kyori.adventure.text.Component.text;
+import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
 
 @RequiredArgsConstructor
@@ -25,8 +26,11 @@ public final class ChessQueueMenu {
     private ChessColor color = null;
     private ChessEngineType chessEngineType = null;
     private int stockfishLevel = 0;
+    private TimeBank timeBank = TimeBank.TEN;
 
-    private static final TextColor HIGHLIGHT = BLUE;
+    private static final TextColor HIGHLIGHT_SIDE = BLUE;
+    private static final TextColor HIGHLIGHT_TIME = GOLD;
+    private static final TextColor HIGHLIGHT_OPPONENT = GREEN;
 
     public void open() {
         final int size = 6 * 9;
@@ -38,11 +42,11 @@ public final class ChessQueueMenu {
         final int randomIndex = 4;
         final int blackIndex = 5;
         if (color == ChessColor.WHITE) {
-            builder.highlightSlot(whiteIndex, HIGHLIGHT);
+            builder.highlightSlot(whiteIndex, HIGHLIGHT_SIDE);
         } else if (color == ChessColor.BLACK) {
-            builder.highlightSlot(blackIndex, HIGHLIGHT);
+            builder.highlightSlot(blackIndex, HIGHLIGHT_SIDE);
         } else {
-            builder.highlightSlot(randomIndex, HIGHLIGHT);
+            builder.highlightSlot(randomIndex, HIGHLIGHT_SIDE);
         }
         gui.setItem(whiteIndex, Mytems.WHITE_QUEEN.createIcon(List.of(text("Play as White", GRAY))), click -> {
                     if (!click.isLeftClick()) return;
@@ -62,10 +66,26 @@ public final class ChessQueueMenu {
                     color = ChessColor.BLACK;
                     open();
                 });
+        // Time Selection
+        for (TimeBank it : TimeBank.values()) {
+            final int slot = 12 + it.ordinal();
+            if (timeBank == it) {
+                builder.highlightSlot(slot, HIGHLIGHT_TIME);
+            }
+            final List<Component> tooltip = List.of(text("Timer " + it.toString(), HIGHLIGHT_TIME),
+                                                    textOfChildren(text("Initial ", GRAY), text(it.getTimeBankMinutes() + " minutes", WHITE)),
+                                                    textOfChildren(text("Increment ", GRAY), text(it.getIncrementSeconds() + " seconds", WHITE)));
+            gui.setItem(slot, it.getMytems().createIcon(tooltip), click -> {
+                    if (!click.isLeftClick()) return;
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
+                    timeBank = it;
+                    open();
+                });
+        }
         // Player Opponent
         final int playerIndex = 10;
         if (chessEngineType == null) {
-            builder.highlightSlot(playerIndex, HIGHLIGHT);
+            builder.highlightSlot(playerIndex, HIGHLIGHT_OPPONENT);
         }
         gui.setItem(playerIndex, Items.text(new ItemStack(Material.PLAYER_HEAD), List.of(text("Challenge another player", GRAY))), click -> {
                 if (!click.isLeftClick()) return;
@@ -76,7 +96,7 @@ public final class ChessQueueMenu {
         // Dummy AI
         final int dummyIndex = 16;
         if (chessEngineType == ChessEngineType.DUMMY) {
-            builder.highlightSlot(dummyIndex, HIGHLIGHT);
+            builder.highlightSlot(dummyIndex, HIGHLIGHT_OPPONENT);
         }
         gui.setItem(dummyIndex, Items.text(new ItemStack(Material.COMPARATOR), List.of(text("Play against easy Computer", GRAY))), click -> {
                     if (!click.isLeftClick()) return;
@@ -92,7 +112,7 @@ public final class ChessQueueMenu {
             final List<Component> tooltip = List.of(text("Play against Stockfish", GRAY),
                                                     text("Level " + level, DARK_GRAY));
             if (chessEngineType == ChessEngineType.STOCKFISH && stockfishLevel == level) {
-                builder.highlightSlot(opponentIndex, HIGHLIGHT);
+                builder.highlightSlot(opponentIndex, HIGHLIGHT_OPPONENT);
             }
             final int finalLevel = level;
             gui.setItem(opponentIndex++, Items.text(icon, tooltip), click -> {
@@ -119,6 +139,8 @@ public final class ChessQueueMenu {
             player.sendMessage(text("A game has already started", RED));
             return;
         }
+        worldChessBoard.getSaveTag().setTimeBank(timeBank.getTimeBank());
+        worldChessBoard.getSaveTag().setTimeIncrement(timeBank.getIncrement());
         if (chessEngineType != null) {
             if (!worldChessBoard.getSaveTag().getQueue().isEmpty()) {
                 player.sendMessage(text("A player is now challenging you", RED));

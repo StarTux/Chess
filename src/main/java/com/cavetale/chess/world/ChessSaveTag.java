@@ -22,6 +22,8 @@ public final class ChessSaveTag implements Serializable {
     private List<UUID> queue = new ArrayList<>();
     private ChessColor queueColor = null;
     private ChessPieceSetType pieceSetType;
+    private long timeBank;
+    private long timeIncrement;
 
     public enum ChessState {
         WAITING,
