@@ -16,6 +16,7 @@ public final class ChessTurn {
     // Externally set
     @Setter private ChessMove nextMove;
     private ChessColor resignation;
+    private ChessColor abandonment;
 
     public void fillCache() {
         if (legalMoves == null) {
@@ -49,6 +50,11 @@ public final class ChessTurn {
         resignation = color;
     }
 
+    public void abandon(ChessColor color) {
+        state = ChessTurnState.ABANDONED;
+        abandonment = color;
+    }
+
     public String getMoveText(ChessMove move) {
         for (var it : moveTexts.entrySet()) {
             if (it.getValue().equals(move)) return it.getKey();
@@ -59,6 +65,7 @@ public final class ChessTurn {
     public ChessColor getWinner() {
         if (!state.gameOver || state.draw) return null;
         if (resignation != null) return resignation.other();
+        if (abandonment != null) return abandonment.other();
         return board.getActiveColor().other();
     }
 

@@ -410,6 +410,25 @@ public final class WorldChessBoard {
         case GAME:
             updateBossBar();
             showPreviousMove();
+            for (ChessColor color : ChessColor.values()) {
+                final var player = saveTag.getPlayer(color);
+                if (!player.isPlayer()) continue;
+                final Player entity = player.getPlayer();
+                if (entity != null && entity.getWorld().equals(world) && perimeter.contains(entity.getLocation())) {
+                    player.setAwaySince(0L);
+                } else {
+                    if (player.getAwaySince() == 0L) {
+                        player.setAwaySince(System.currentTimeMillis());
+                    } else {
+                        final long awayTime = System.currentTimeMillis() - player.getAwaySince();
+                        if (awayTime > 1000L * 60L) {
+                            game.getCurrentTurn().abandon(color);
+                            onGameOver();
+                            return;
+                        }
+                    }
+                }
+            }
             final var color = game.getCurrentBoard().getActiveColor();
             final var player = saveTag.getPlayer(color);
             if (player.getTimeBankMillis() <= 0L) {
@@ -895,6 +914,9 @@ public final class WorldChessBoard {
         case TIMEOUT:
             announce(text(saveTag.getPlayer(winner).getName() + " (" + winner.getHumanName() + ") wins by timeout!", GREEN));
             break;
+        case ABANDONED:
+            announce(text(saveTag.getPlayer(winner).getName() + " (" + winner.getHumanName() + ") wins by abandonment!", GREEN));
+            break;
         default: break;
         }
         if (game.getTurns().size() > 5) {
@@ -933,19 +955,24 @@ public final class WorldChessBoard {
             final int seconds = Math.max(0, player.getTimeBankSeconds());
             final int minutes = seconds / 60;
             final boolean playing = player.isPlaying();
+            final var textColor = player.getAwaySince() != 0L
+                ? DARK_RED
+                : (color == ChessColor.WHITE
+                   ? GRAY
+                   : DARK_GRAY);
             if (color == ChessColor.WHITE) {
                 if (playing) {
                     bossBarText.add(Mytems.COLORFALL_HOURGLASS.getCurrentAnimationFrame());
                     progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));
                 }
-                bossBarText.add(text(String.format("%2d", minutes), playing ? AQUA : GRAY));
-                bossBarText.add(text(":", GRAY));
-                bossBarText.add(text(String.format("%02d", seconds % 60), playing ? AQUA : GRAY));
+                bossBarText.add(text(String.format("%2d", minutes), textColor));
+                bossBarText.add(text(":", textColor));
+                bossBarText.add(text(String.format("%02d", seconds % 60), textColor));
                 bossBarText.add(space());
-                bossBarText.add(text(player.getName(), GRAY).decoration(BOLD, playing));
+                bossBarText.add(text(player.getName(), textColor).decoration(BOLD, playing));
                 if (whiteScore > blackScore) {
                     bossBarText.add(space());
-                    bossBarText.add(text(Unicode.superscript("+" + (whiteScore - blackScore)), GRAY));
+                    bossBarText.add(text(Unicode.superscript("+" + (whiteScore - blackScore)), textColor));
                 }
                 for (var type : ChessPieceType.values()) {
                     final int has = blackPieceCount.getOrDefault(type, 0);
@@ -969,14 +996,14 @@ public final class WorldChessBoard {
                     }
                 }
                 if (blackScore > whiteScore) {
-                    bossBarText.add(text(Unicode.superscript("+" + (blackScore - whiteScore)), DARK_GRAY));
+                    bossBarText.add(text(Unicode.superscript("+" + (blackScore - whiteScore)), textColor));
                     bossBarText.add(space());
                 }
-                bossBarText.add(text(player.getName(), DARK_GRAY).decoration(BOLD, playing));
+                bossBarText.add(text(player.getName(), textColor).decoration(BOLD, playing));
                 bossBarText.add(space());
-                bossBarText.add(text(String.format("%2d", minutes), playing ? AQUA : DARK_GRAY));
-                bossBarText.add(text(":", DARK_GRAY));
-                bossBarText.add(text(String.format("%02d", seconds % 60), playing ? AQUA : DARK_GRAY));
+                bossBarText.add(text(String.format("%2d", minutes), textColor));
+                bossBarText.add(text(":", textColor));
+                bossBarText.add(text(String.format("%02d", seconds % 60), textColor));
                 if (playing) {
                     bossBarText.add(Mytems.COLORFALL_HOURGLASS.getCurrentAnimationFrame());
                     progress = Math.max(0.0f, Math.min(1.0f, (float) player.getTimeBankMillis() / (float) TIME_BANK));

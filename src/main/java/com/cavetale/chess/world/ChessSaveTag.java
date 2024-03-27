@@ -71,6 +71,7 @@ public final class ChessSaveTag implements Serializable {
         private long timeBank;
         private long timeIncrement;
         private boolean playing;
+        private long awaySince;
 
         public boolean isEmpty() {
             return chessEngineType == null && player == null;
@@ -87,6 +88,10 @@ public final class ChessSaveTag implements Serializable {
                 return PlayerCache.nameForUuid(player);
             }
             return "N/A";
+        }
+
+        public boolean isPlayer() {
+            return player != null;
         }
 
         public boolean isPlayer(Player other) {

@@ -59,13 +59,14 @@ public final class Main {
             final var color = board.getActiveColor();
             final var state = turn.getState();
             if (state.isGameOver()) {
+                final var winner = turn.getWinner();
                 System.out.println(game.toPgnString());
                 switch (state) {
                 case CHECKMATE:
-                    System.out.println(color.other().getHumanName() + " wins by checkmate!");
+                    System.out.println(winner.getHumanName() + " wins by checkmate!");
                     break;
                 case RESIGNATION:
-                    System.out.println(color.other().getHumanName() + " wins by resignation!");
+                    System.out.println(winner.getHumanName() + " wins by resignation!");
                     break;
                 case STALEMATE:
                     System.out.println("Stalemate!");
@@ -86,7 +87,10 @@ public final class Main {
                     System.out.println("Draw by timeout");
                     break;
                 case TIMEOUT:
-                    System.out.println(turn.getWinner().getHumanName() + " wins by timeout!");
+                    System.out.println(winner.getHumanName() + " wins by timeout!");
+                    break;
+                case ABANDONED:
+                    System.out.println(winner.getHumanName() + " wins by abandonment!");
                     break;
                 default:
                     throw new IllegalStateException("Game Over state=" + state);
