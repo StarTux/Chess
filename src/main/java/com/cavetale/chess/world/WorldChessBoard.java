@@ -936,6 +936,12 @@ public final class WorldChessBoard {
         } else {
             plugin().getDatabase().insertAsync(row, i -> plugin().getLogger().info("Game saved with id " + row.getId()));
         }
+        if (winner != null && saveTag.getPlayer(winner).isPlayer() && saveTag.getPlayer(winner.other()).isStockfish()) {
+            final var player = saveTag.getPlayer(winner).getPlayer();
+            if (player != null) {
+                Mytems.KITTY_COIN.giveItemStack(player, 1 + saveTag.getPlayer(winner.other()).getStockfishLevel() / 3);
+            }
+        }
         saveTag.setState(ChessSaveTag.ChessState.WAITING);
     }
 

@@ -167,5 +167,9 @@ public final class ChessSaveTag implements Serializable {
         public boolean isCpu() {
             return chessEngineType != null;
         }
+
+        public boolean isStockfish() {
+            return chessEngineType == ChessEngineType.STOCKFISH;
+        }
     }
 }
