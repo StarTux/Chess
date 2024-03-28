@@ -24,6 +24,7 @@ public final class ChessSaveTag implements Serializable {
     private ChessPieceSetType pieceSetType;
     private long timeBank;
     private long timeIncrement;
+    private long startTime;
 
     public enum ChessState {
         WAITING,
@@ -47,10 +48,12 @@ public final class ChessSaveTag implements Serializable {
             black = new ChessPlayer();
             queue.clear();
             queueColor = null;
+            startTime = 0L;
             break;
         case GAME:
             queue.clear();
             queueColor = null;
+            startTime = System.currentTimeMillis();
             break;
         default: break;
         }
@@ -92,6 +95,20 @@ public final class ChessSaveTag implements Serializable {
             return "N/A";
         }
 
+        public String getDatabaseName() {
+            if (chessEngineType != null) {
+                if (chessEngineType == ChessEngineType.STOCKFISH) {
+                    return String.format("Stockfish-%02d", stockfishLevel);
+                } else {
+                    return chessEngineType.getDisplayName();
+                }
+            }
+            if (player != null) {
+                return player.toString();
+            }
+            return "N/A";
+        }
+
         public boolean isPlayer() {
             return player != null;
         }
@@ -113,6 +130,10 @@ public final class ChessSaveTag implements Serializable {
         public Player getPlayer() {
             if (player == null) return null;
             return Bukkit.getPlayer(player);
+        }
+
+        public UUID getPlayerUuid() {
+            return player;
         }
 
         public void startMove() {

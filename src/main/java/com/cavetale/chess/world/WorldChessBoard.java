@@ -12,6 +12,7 @@ import com.cavetale.chess.board.ChessPieceType;
 import com.cavetale.chess.board.ChessSquare;
 import com.cavetale.chess.board.ChessTurnState;
 import com.cavetale.chess.net.LichessImport;
+import com.cavetale.chess.sql.SQLChessGame;
 import com.cavetale.core.event.hud.PlayerHudEvent;
 import com.cavetale.core.event.hud.PlayerHudPriority;
 import com.cavetale.core.font.GuiOverlay;
@@ -916,8 +917,13 @@ public final class WorldChessBoard {
             break;
         default: break;
         }
+        final SQLChessGame row = new SQLChessGame(this);
         if (game.getTurns().size() > 5) {
             new LichessImport(game, url -> {
+                    if (url != null) {
+                        row.setLichessUrl(url);
+                    }
+                    plugin().getDatabase().insertAsync(row, i -> plugin().getLogger().info("Game saved with id " + row.getId()));
                     if (url == null) {
                         url = game.toLichessAnalysisUrl();
                     }
@@ -927,6 +933,8 @@ public final class WorldChessBoard {
                              .clickEvent(openUrl(url)));
                     plugin().getLogger().info(url);
             }).async();
+        } else {
+            plugin().getDatabase().insertAsync(row, i -> plugin().getLogger().info("Game saved with id " + row.getId()));
         }
         saveTag.setState(ChessSaveTag.ChessState.WAITING);
     }
