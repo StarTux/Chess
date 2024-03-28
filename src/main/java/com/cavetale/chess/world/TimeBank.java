@@ -5,8 +5,8 @@ import lombok.Getter;
 
 @Getter
 public enum TimeBank {
-    FIVE(Mytems.COLORFALL_HOURGLASS, 5, 0),
-    TEN(Mytems.MOONLIGHT_HOURGLASS, 10, 0),
+    FIVE(Mytems.COLORFALL_HOURGLASS, 5, 5),
+    TEN(Mytems.MOONLIGHT_HOURGLASS, 10, 5),
     FIFTEEN(Mytems.ATMOSPHERE_HOURGLASS, 15, 10);
 
     private final Mytems mytems;
