@@ -20,6 +20,7 @@ public final class SQLChessGame implements SQLRow {
     @VarChar(40) private String whiteName;
     private int blackType;
     @VarChar(40) private String blackName;
+    private int moves;
     @Text private String pgn;
     @VarChar(40) private String result;
     private int winner;
@@ -40,6 +41,7 @@ public final class SQLChessGame implements SQLRow {
         final var black = wcb.getSaveTag().getBlack();
         blackType = black.isPlayer() ? 0 : 1;
         blackName = black.getDatabaseName();
+        moves = wcb.getGame().getMoveCount();
         pgn = wcb.getGame().toPgnString();
         result = wcb.getGame().getCurrentTurn().getState().name().toLowerCase();
         final var theWinner = wcb.getGame().getCurrentTurn().getWinner();

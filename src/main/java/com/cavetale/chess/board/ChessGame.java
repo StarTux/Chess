@@ -29,6 +29,10 @@ public final class ChessGame {
         currentTurn.fillCache();
     }
 
+    public int getMoveCount() {
+        return turns.size() - 1;
+    }
+
     public void loadFenString(String fen) {
         turns = new ArrayList<>();
         final ChessBoard board = new ChessBoard();
