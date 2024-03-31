@@ -757,6 +757,7 @@ public final class WorldChessBoard {
         if (black != null) {
             black.sendMessage(textOfChildren(Mytems.BLACK_QUEEN, text("You play as Black", DARK_GRAY)));
         }
+        cpuRequestScheduled = false;
     }
 
     protected void startCPU(Player player, ChessColor chosenColor, ChessEngineType type, Consumer<ChessSaveTag.ChessPlayer> callback) {
@@ -786,6 +787,7 @@ public final class WorldChessBoard {
         save();
         clearPieces();
         spawnAllPieces();
+        cpuRequestScheduled = false;
         player.sendMessage(textOfChildren(ChessPiece.of(color, ChessPieceType.QUEEN).getMytems(),
                                           text("You play as " + color.getHumanName(), (color == ChessColor.WHITE ? GRAY : DARK_GRAY))));
     }
@@ -943,6 +945,7 @@ public final class WorldChessBoard {
             }
         }
         saveTag.setState(ChessSaveTag.ChessState.WAITING);
+        cpuRequestScheduled = false;
     }
 
     private void updateBossBar() {
