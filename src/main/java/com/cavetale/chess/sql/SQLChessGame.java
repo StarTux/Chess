@@ -24,7 +24,7 @@ public final class SQLChessGame implements SQLRow {
     @Text private String pgn;
     @VarChar(40) private String result;
     private int winner;
-    private String lichessUrl;
+    @Nullable private String lichessUrl;
 
     public SQLChessGame() { }
 
