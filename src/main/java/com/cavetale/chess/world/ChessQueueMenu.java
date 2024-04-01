@@ -26,7 +26,7 @@ public final class ChessQueueMenu {
     private ChessColor color = null;
     private ChessEngineType chessEngineType = null;
     private int stockfishLevel = 0;
-    private TimeBank timeBank = TimeBank.TEN;
+    private TimeBank timeBank = TimeBank.FIFTEEN;
 
     private static final TextColor HIGHLIGHT_SIDE = BLUE;
     private static final TextColor HIGHLIGHT_TIME = GOLD;
