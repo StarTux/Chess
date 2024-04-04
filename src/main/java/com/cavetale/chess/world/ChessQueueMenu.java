@@ -5,7 +5,6 @@ import com.cavetale.chess.board.ChessColor;
 import com.cavetale.core.font.GuiOverlay;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.util.Gui;
-import com.cavetale.mytems.util.Items;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.text.Component;
@@ -15,6 +14,7 @@ import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import static com.cavetale.mytems.util.Items.tooltip;
 import static net.kyori.adventure.text.Component.text;
 import static net.kyori.adventure.text.Component.textOfChildren;
 import static net.kyori.adventure.text.format.NamedTextColor.*;
@@ -49,23 +49,23 @@ public final class ChessQueueMenu {
             builder.highlightSlot(randomIndex, HIGHLIGHT_SIDE);
         }
         gui.setItem(whiteIndex, Mytems.WHITE_QUEEN.createIcon(List.of(text("Play as White", GRAY))), click -> {
-                    if (!click.isLeftClick()) return;
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
-                    color = ChessColor.WHITE;
-                    open();
-                });
+                if (!click.isLeftClick()) return;
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
+                color = ChessColor.WHITE;
+                open();
+            });
         gui.setItem(randomIndex, Mytems.DICE.createIcon(List.of(text("Play Random Color", GRAY))), click -> {
-                    if (!click.isLeftClick()) return;
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
-                    color = null;
-                    open();
-                });
+                if (!click.isLeftClick()) return;
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
+                color = null;
+                open();
+            });
         gui.setItem(blackIndex, Mytems.BLACK_QUEEN.createIcon(List.of(text("Play as Black", GRAY))), click -> {
-                    if (!click.isLeftClick()) return;
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
-                    color = ChessColor.BLACK;
-                    open();
-                });
+                if (!click.isLeftClick()) return;
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
+                color = ChessColor.BLACK;
+                open();
+            });
         // Time Selection
         for (TimeBank it : TimeBank.values()) {
             final int slot = 12 + it.ordinal();
@@ -87,7 +87,7 @@ public final class ChessQueueMenu {
         if (chessEngineType == null) {
             builder.highlightSlot(playerIndex, HIGHLIGHT_OPPONENT);
         }
-        gui.setItem(playerIndex, Items.text(new ItemStack(Material.PLAYER_HEAD), List.of(text("Challenge another player", GRAY))), click -> {
+        gui.setItem(playerIndex, tooltip(new ItemStack(Material.PLAYER_HEAD), List.of(text("Challenge another player", GRAY))), click -> {
                 if (!click.isLeftClick()) return;
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
                 chessEngineType = null;
@@ -98,11 +98,11 @@ public final class ChessQueueMenu {
         if (chessEngineType == ChessEngineType.DUMMY) {
             builder.highlightSlot(dummyIndex, HIGHLIGHT_OPPONENT);
         }
-        gui.setItem(dummyIndex, Items.text(new ItemStack(Material.COMPARATOR), List.of(text("Play against easy Computer", GRAY))), click -> {
-                    if (!click.isLeftClick()) return;
-                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
-                    chessEngineType = ChessEngineType.DUMMY;
-                    open();
+        gui.setItem(dummyIndex, tooltip(new ItemStack(Material.COMPARATOR), List.of(text("Play against easy Computer", GRAY))), click -> {
+                if (!click.isLeftClick()) return;
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
+                chessEngineType = ChessEngineType.DUMMY;
+                open();
             });
         // Stockfish AI
         int opponentIndex = 19;
@@ -115,7 +115,7 @@ public final class ChessQueueMenu {
                 builder.highlightSlot(opponentIndex, HIGHLIGHT_OPPONENT);
             }
             final int finalLevel = level;
-            gui.setItem(opponentIndex++, Items.text(icon, tooltip), click -> {
+            gui.setItem(opponentIndex++, tooltip(icon, tooltip), click -> {
                     if (!click.isLeftClick()) return;
                     player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 1f, 1f);
                     chessEngineType = ChessEngineType.STOCKFISH;
