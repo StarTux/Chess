@@ -17,9 +17,9 @@ public final class SQLChessGame implements SQLRow {
     private Date endTime;
     @VarChar(15) private String timeBank;
     private int whiteType;
-    @VarChar(40) private String whiteName;
+    @Keyed @VarChar(40) private String whiteName;
     private int blackType;
-    @VarChar(40) private String blackName;
+    @Keyed @VarChar(40) private String blackName;
     private int moves;
     @Text private String pgn;
     @VarChar(40) private String result;
