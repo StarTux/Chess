@@ -22,7 +22,6 @@ import com.cavetale.core.struct.Vec2i;
 import com.cavetale.core.util.Json;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.util.Gui;
-import com.cavetale.mytems.util.Items;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -57,6 +56,7 @@ import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 import static com.cavetale.chess.ChessPlugin.plugin;
 import static com.cavetale.mytems.util.Entities.setTransient;
+import static com.cavetale.mytems.util.Items.tooltip;
 import static net.kyori.adventure.text.Component.empty;
 import static net.kyori.adventure.text.Component.join;
 import static net.kyori.adventure.text.Component.space;
@@ -560,7 +560,7 @@ public final class WorldChessBoard {
         final var builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
             .title(text("Cancel?", WHITE));
         final Gui gui = new Gui().size(size).title(builder.build());
-        gui.setItem(4, Items.text(Mytems.NO.createItemStack(), List.of(text("Cancel Request", RED))), click -> {
+        gui.setItem(4, tooltip(Mytems.NO.createItemStack(), List.of(text("Cancel Request", RED))), click -> {
                 if (!click.isLeftClick()) return;
                 player.closeInventory();
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
@@ -626,7 +626,7 @@ public final class WorldChessBoard {
                 final Gui gui = new Gui().size(size).title(builder.build());
                 int index = 1;
                 for (var type : ChessBoard.PROMOTION_PIECES) {
-                    gui.setItem(index, Items.text(ChessPiece.of(color, type).getMytems().createItemStack(), List.of(text(type.getHumanName(), GREEN))), click -> {
+                    gui.setItem(index, tooltip(ChessPiece.of(color, type).getMytems().createItemStack(), List.of(text(type.getHumanName(), GREEN))), click -> {
                             if (!click.isLeftClick()) return;
                             player.closeInventory();
                             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
@@ -1056,7 +1056,7 @@ public final class WorldChessBoard {
         final var builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
             .title(text("End the Game?", WHITE));
         final Gui gui = new Gui().size(size).title(builder.build());
-        gui.setItem(2, Items.text(Mytems.REDO.createItemStack(), List.of(text((drawOffered == color.other() ? "Agree to Draw" : "Offer Draw"), GREEN))), click -> {
+        gui.setItem(2, tooltip(Mytems.REDO.createItemStack(), List.of(text((drawOffered == color.other() ? "Agree to Draw" : "Offer Draw"), GREEN))), click -> {
                 if (!click.isLeftClick()) return;
                 player.closeInventory();
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
@@ -1073,7 +1073,7 @@ public final class WorldChessBoard {
                     onGameOver();
                 }
             });
-        gui.setItem(6, Items.text(new ItemStack(Material.WHITE_BANNER), List.of(text("Resign", RED))), click -> {
+        gui.setItem(6, tooltip(new ItemStack(Material.WHITE_BANNER), List.of(text("Resign", RED))), click -> {
                 if (!click.isLeftClick()) return;
                 player.closeInventory();
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
