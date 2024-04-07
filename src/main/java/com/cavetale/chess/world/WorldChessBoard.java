@@ -530,8 +530,19 @@ public final class WorldChessBoard {
     }
 
     protected void onPlayerHud(PlayerHudEvent event) {
+        final Player player = event.getPlayer();
         if (bossBar != null) {
-            event.bossbar(PlayerHudPriority.DEFAULT, bossBar);
+            final PlayerHudPriority prio;
+            if (saveTag.getState() == ChessSaveTag.ChessState.GAME) {
+                if (saveTag.getWhite().isPlayer(player) || saveTag.getBlack().isPlayer(player)) {
+                    prio = PlayerHudPriority.HIGH;
+                } else {
+                    prio = PlayerHudPriority.LOW;
+                }
+            } else {
+                prio = PlayerHudPriority.LOWEST;
+            }
+            event.bossbar(prio, bossBar);
         }
     }
 
