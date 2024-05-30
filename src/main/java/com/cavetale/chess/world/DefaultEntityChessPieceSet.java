@@ -148,7 +148,8 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
                 as.setCanMove(false);
                 as.setCanTick(false);
                 as.setGravity(false);
-                as.setDisabledSlots(EquipmentSlot.values());
+                as.setDisabledSlots(EquipmentSlot.HAND, EquipmentSlot.OFF_HAND,
+                                    EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET);
             });
     }
 
