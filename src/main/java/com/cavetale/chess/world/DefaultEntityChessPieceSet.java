@@ -221,7 +221,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
     }
 
     private static ItemStack whiteQueenSkull() {
-        return Skull.create("Snow queen",
+        return Skull.create("SnowQueen",
                             UUID.fromString("299db46a-638e-46b1-8027-d49b362dcc81"),
                             "eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2EzZGFmMjFhMGE3Njk0YmViYTg0ODU2NGRmNGM3ZmM1MjZmYjQ5NjY5NWZkNWE4Y2VmYWVmM2EwZWVkM2NjYSJ9fX0=");
     }
