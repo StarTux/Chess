@@ -1,7 +1,7 @@
 package com.cavetale.chess.sql;
 
-import org.junit.Test;
 import com.winthier.sql.SQLDatabase;
+import org.junit.Test;
 
 public final class SQLTest {
     @Test

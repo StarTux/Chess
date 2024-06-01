@@ -1,7 +1,7 @@
 package com.cavetale.chess.world;
 
-import lombok.RequiredArgsConstructor;
 import java.util.function.Supplier;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Enumerate all the available sets of piece types, that is different

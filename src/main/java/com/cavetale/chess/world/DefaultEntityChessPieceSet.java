@@ -273,7 +273,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
         public void explode() {
             final double height = entity.getHeight();
             final var location = entity.getLocation().add(0.0, height * 0.5, 0.0);
-            location.getWorld().spawnParticle(Particle.BLOCK_CRACK, location, 128,
+            location.getWorld().spawnParticle(Particle.BLOCK, location, 128,
                                               0.25, height * 0.25, 0.25, 0.0,
                                               (chessPiece.color == ChessColor.WHITE
                                                ? Material.WHITE_CONCRETE.createBlockData()
@@ -309,7 +309,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
         public void explode() {
             final double height = rider.getHeight();
             final var location = rider.getLocation().add(0.0, height * 0.5, 0.0);
-            location.getWorld().spawnParticle(Particle.BLOCK_CRACK, location, 128,
+            location.getWorld().spawnParticle(Particle.BLOCK, location, 128,
                                               0.25, height * 0.25, 0.25, 0.0,
                                               (chessPiece.color == ChessColor.WHITE
                                                ? Material.WHITE_CONCRETE.createBlockData()
