@@ -79,7 +79,7 @@ public final class StockfishAI {
     }
 
     private void start() throws Exception {
-        process = Runtime.getRuntime().exec("/home/mc/public/stockfish/stockfish");
+        process = Runtime.getRuntime().exec(new String[] {"/home/mc/public/stockfish/stockfish"});
         out = new BufferedReader(new InputStreamReader(process.getInputStream()));
         in = new PrintStream(process.getOutputStream());
         startTime = System.currentTimeMillis();
