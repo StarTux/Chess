@@ -2,6 +2,8 @@ package com.cavetale.chess.world;
 
 import com.cavetale.chess.ai.ChessEngineType;
 import com.cavetale.chess.board.ChessColor;
+import com.cavetale.core.event.minigame.MinigameMatchCompleteEvent;
+import com.cavetale.core.event.minigame.MinigameMatchType;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.playercache.PlayerCache;
 import java.io.Serializable;
@@ -65,6 +67,19 @@ public final class ChessSaveTag implements Serializable {
 
     public List<ChessPlayer> getPlayers() {
         return List.of(white, black);
+    }
+
+    public MinigameMatchCompleteEvent callMinigameEvent(ChessColor winner) {
+        if (state != ChessState.GAME) return null;
+        if (!getPlayer(ChessColor.WHITE).isPlayer() && getPlayer(ChessColor.BLACK).isPlayer()) return null;
+        MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.CHESS);
+        if (white.isPlayer()) event.addPlayer(white.getPlayer());
+        if (black.isPlayer()) event.addPlayer(black.getPlayer());
+        if (winner != null && getPlayer(winner).isPlayer()) {
+            event.addWinner(getPlayer(winner).getPlayer());
+        }
+        event.callEvent();
+        return event;
     }
 
     @Data
