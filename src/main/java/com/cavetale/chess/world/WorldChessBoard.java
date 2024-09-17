@@ -10,6 +10,8 @@ import com.cavetale.chess.board.ChessMove;
 import com.cavetale.chess.board.ChessPiece;
 import com.cavetale.chess.board.ChessPieceType;
 import com.cavetale.chess.board.ChessSquare;
+import com.cavetale.chess.board.ChessTurn;
+import com.cavetale.chess.board.ChessTurnState;
 import com.cavetale.chess.board.ChessTurnState;
 import com.cavetale.chess.net.LichessImport;
 import com.cavetale.chess.sql.SQLChessGame;
@@ -19,6 +21,7 @@ import com.cavetale.core.font.GuiOverlay;
 import com.cavetale.core.font.Unicode;
 import com.cavetale.core.struct.Cuboid;
 import com.cavetale.core.struct.Vec2i;
+import com.cavetale.core.struct.Vec3d;
 import com.cavetale.core.util.Json;
 import com.cavetale.mytems.Mytems;
 import com.cavetale.mytems.util.Gui;
@@ -26,9 +29,11 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -37,6 +42,7 @@ import lombok.RequiredArgsConstructor;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Axis;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -47,11 +53,14 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 import static com.cavetale.chess.ChessPlugin.plugin;
@@ -214,14 +223,14 @@ public final class WorldChessBoard {
                                                    + " u:" + matchUp);
         }
         // Chunks
-        final var chunkCuboid = boardArea.blockToChunk();
+        final Cuboid chunkCuboid = boardArea.blockToChunk();
         for (int z = chunkCuboid.az; z <= chunkCuboid.bz; z += 1) {
             for (int x = chunkCuboid.ax; x <= chunkCuboid.bx; x += 1) {
                 chunks.add(new Vec2i(x, z));
             }
         }
         // Squares
-        for (var square : ChessSquare.values()) {
+        for (ChessSquare square : ChessSquare.values()) {
             final int dx = faceBoardX.getModX() * lengthBoardX * square.x
                 + faceBoardY.getModX() * lengthBoardY * square.y;
             final int dy = faceBoardX.getModY() * lengthBoardX * square.x
@@ -249,7 +258,7 @@ public final class WorldChessBoard {
     }
 
     public List<Player> getPlayersInPerimeter() {
-        final var list = new ArrayList<Player>();
+        final List<Player> list = new ArrayList<>();
         for (Player player : world.getPlayers()) {
             if (!perimeter.contains(player.getLocation())) continue;
             list.add(player);
@@ -258,7 +267,7 @@ public final class WorldChessBoard {
     }
 
     public void announce(Component text) {
-        for (var player : getPlayersInPerimeter()) {
+        for (Player player : getPlayersInPerimeter()) {
             player.sendMessage(text);
         }
     }
@@ -289,7 +298,7 @@ public final class WorldChessBoard {
 
     public Location getCenterLocation(ChessSquare square) {
         final Cuboid squareCuboid = squares.get(square);
-        final var vector = squareCuboid.getFaceCenterExact(faceBoardOrtho);
+        final Vec3d vector = squareCuboid.getFaceCenterExact(faceBoardOrtho);
         return vector.toLocation(world);
     }
 
@@ -301,7 +310,7 @@ public final class WorldChessBoard {
         if (pieceSet == null || !pieceSet.canSupport(this)) {
             pieceSet = null;
             saveTag.setPieceSetType(null);
-            for (var it : ChessPieceSetType.values()) {
+            for (ChessPieceSetType it : ChessPieceSetType.values()) {
                 if (it.getChessPieceSet().canSupport(this)) {
                     pieceSet = it.getChessPieceSet();
                     saveTag.setPieceSetType(it);
@@ -323,7 +332,7 @@ public final class WorldChessBoard {
     }
 
     public void clearPieces() {
-        for (var piece : pieces.values()) {
+        for (WorldChessPiece piece : pieces.values()) {
             piece.remove();
         }
         pieces.clear();
@@ -331,13 +340,13 @@ public final class WorldChessBoard {
 
     public void spawnAllPieces() {
         if (!awake) return;
-        final var board = game.getCurrentBoard();
-        for (var square : ChessSquare.values()) {
-            final var old = pieces.remove(square);
+        final ChessBoard board = game.getCurrentBoard();
+        for (ChessSquare square : ChessSquare.values()) {
+            final WorldChessPiece old = pieces.remove(square);
             if (old != null) old.remove();
-            final var piece = board.getPieceAt(square);
+            final ChessPiece piece = board.getPieceAt(square);
             if (piece == null) continue;
-            final var placed = getPieceSet().place(this, square, piece);
+            final WorldChessPiece placed = getPieceSet().place(this, square, piece);
             if (placed == null) continue;
             pieces.put(square, placed);
         }
@@ -384,9 +393,9 @@ public final class WorldChessBoard {
     }
 
     public boolean allChunksAreLoaded() {
-        for (var vec : chunks) {
+        for (Vec2i vec : chunks) {
             if (!world.isChunkLoaded(vec.x, vec.z)) return false;
-            final var chunk = world.getChunkAt(vec.x, vec.z);
+            final Chunk chunk = world.getChunkAt(vec.x, vec.z);
             if (chunk.getLoadLevel() != Chunk.LoadLevel.ENTITY_TICKING) return false;
         }
         return true;
@@ -400,9 +409,9 @@ public final class WorldChessBoard {
         switch (saveTag.getState()) {
         case WAITING:
             if (saveTag.getQueue().isEmpty()) return;
-            for (var iter = saveTag.getQueue().iterator(); iter.hasNext();) {
-                final var uuid = iter.next();
-                final var player = Bukkit.getPlayer(uuid);
+            for (Iterator<UUID> iter = saveTag.getQueue().iterator(); iter.hasNext();) {
+                final UUID uuid = iter.next();
+                final Player player = Bukkit.getPlayer(uuid);
                 if (player == null || !perimeter.contains(player.getLocation())) {
                     iter.remove();
                 }
@@ -412,9 +421,9 @@ public final class WorldChessBoard {
             updateBossBar();
             showPreviousMove();
             for (ChessColor color : ChessColor.values()) {
-                final var player = saveTag.getPlayer(color);
+                final ChessSaveTag.ChessPlayer player = saveTag.getPlayer(color);
                 if (!player.isPlayer()) continue;
-                final Player entity = player.getPlayer();
+                final Player entity = player.getPlayerEntity();
                 if (entity != null && entity.getWorld().equals(world) && perimeter.contains(entity.getLocation())) {
                     player.setAwaySince(0L);
                 } else {
@@ -430,8 +439,8 @@ public final class WorldChessBoard {
                     }
                 }
             }
-            final var color = game.getCurrentBoard().getActiveColor();
-            final var player = saveTag.getPlayer(color);
+            final ChessColor color = game.getCurrentBoard().getActiveColor();
+            final ChessSaveTag.ChessPlayer player = saveTag.getPlayer(color);
             if (player.getTimeBankMillis() <= 0L) {
                 game.getCurrentTurn().setTimeout();
                 onGameOver();
@@ -440,7 +449,7 @@ public final class WorldChessBoard {
                 switch (player.getChessEngineType()) {
                 case DUMMY: {
                     if (player.getMoveSeconds() < 5) return;
-                    final var move = new DummyAI().getBestMove(game);
+                    final ChessMove move = new DummyAI().getBestMove(game);
                     move(move);
                     break;
                 }
@@ -449,7 +458,7 @@ public final class WorldChessBoard {
                     cpuRequestScheduled = true;
                     final String fenString = game.getCurrentBoard().toFenString();
                     final int currentTurnNumber = game.getCurrentBoard().getFullMoveClock();
-                    final var ai = new StockfishAI(fenString, move -> {
+                    final StockfishAI ai = new StockfishAI(fenString, move -> {
                             if (!game.getCurrentBoard().toFenString().equals(fenString)) return;
                             if (move == null) {
                                 game.getCurrentTurn().resign(color);
@@ -484,7 +493,7 @@ public final class WorldChessBoard {
             break;
         }
         case GAME: {
-            final var color = game.getCurrentBoard().getActiveColor();
+            final ChessColor color = game.getCurrentBoard().getActiveColor();
             if (saveTag.getPlayer(color).isPlayer(player)) {
                 clickMove(player, square);
             } else if (saveTag.getPlayer(color.other()).isPlayer(player)) {
@@ -505,7 +514,7 @@ public final class WorldChessBoard {
         lastInputTicks = ticks;
         switch (saveTag.getState()) {
         case GAME: {
-            final var color = game.getCurrentBoard().getActiveColor();
+            final ChessColor color = game.getCurrentBoard().getActiveColor();
             if (saveTag.getPlayer(color).isPlayer(player)) {
                 clickMove(player, square);
                 return true;
@@ -568,7 +577,7 @@ public final class WorldChessBoard {
 
     private void openCancelMenu(Player player) {
         final int size = 9;
-        final var builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
+        final GuiOverlay.Builder builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
             .title(text("Cancel?", WHITE));
         final Gui gui = new Gui().size(size).title(builder.build());
         gui.setItem(4, tooltip(Mytems.NO.createItemStack(), List.of(text("Cancel Request", RED))), click -> {
@@ -587,8 +596,8 @@ public final class WorldChessBoard {
     }
 
     private void clickMove(Player player, ChessSquare clickedSquare) {
-        final var piece = game.getCurrentBoard().getPieceAt(clickedSquare);
-        final var color = game.getCurrentBoard().getActiveColor();
+        final ChessPiece piece = game.getCurrentBoard().getPieceAt(clickedSquare);
+        final ChessColor color = game.getCurrentBoard().getActiveColor();
         if (moveFrom == clickedSquare) {
             player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
             clearLegalMoves();
@@ -602,7 +611,7 @@ public final class WorldChessBoard {
                 return;
             }
             clearLegalMoves();
-            for (var move : game.getCurrentTurn().getLegalMoves().keySet()) {
+            for (ChessMove move : game.getCurrentTurn().getLegalMoves().keySet()) {
                 if (move.from() != clickedSquare) continue;
                 legalTargets.add(move.to());
                 if (!legalTargets.contains(move.to())) {
@@ -617,8 +626,8 @@ public final class WorldChessBoard {
                 player.playSound(player.getLocation(), Sound.BLOCK_WOOD_HIT, SoundCategory.MASTER, 0.5f, 0.75f);
             }
         } else if (moveFrom != null && legalTargets.contains(clickedSquare)) {
-            final var list = new ArrayList<ChessMove>();
-            for (var move : game.getCurrentTurn().getLegalMoves().keySet()) {
+            final List<ChessMove> list = new ArrayList<>();
+            for (ChessMove move : game.getCurrentTurn().getLegalMoves().keySet()) {
                 if (move.from() == moveFrom && move.to() == clickedSquare) {
                     list.add(move);
                 }
@@ -632,16 +641,16 @@ public final class WorldChessBoard {
             } else {
                 // Promotion
                 final int size = 9;
-                final var builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
+                final GuiOverlay.Builder builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
                     .title(text("Promotion", WHITE));
                 final Gui gui = new Gui().size(size).title(builder.build());
                 int index = 1;
-                for (var type : ChessBoard.PROMOTION_PIECES) {
+                for (ChessPieceType type : ChessBoard.PROMOTION_PIECES) {
                     gui.setItem(index, tooltip(ChessPiece.of(color, type).getMytems().createItemStack(), List.of(text(type.getHumanName(), GREEN))), click -> {
                             if (!click.isLeftClick()) return;
                             player.closeInventory();
                             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-                            for (var move : list) {
+                            for (ChessMove move : list) {
                                 if (move.promotion() == type) {
                                     move(move);
                                     return;
@@ -661,31 +670,31 @@ public final class WorldChessBoard {
     public static final AxisAngle4f AXISANGLE4F_FLIP = new org.joml.AxisAngle4f((float) Math.PI, 0f, 1f, 0f);
 
     private void fillLegalMoves(Player player) {
-        final var translation = new Vector3f((float) Math.abs(faceBoardX.getModX() + faceBoardY.getModX()) * -0.5f,
-                                             (float) Math.abs(faceBoardX.getModY() + faceBoardY.getModY()) * -0.5f,
-                                             (float) Math.abs(faceBoardX.getModZ() + faceBoardY.getModZ()) * -0.5f);
-        final var leftRotation = AXISANGLE4F_ZERO;
-        final var rightRotation = AXISANGLE4F_ZERO;
-        final var scale = new Vector3f(facingAxis == Axis.X ? 0f : 1f,
-                                       facingAxis == Axis.Y ? 0f : 1f,
-                                       facingAxis == Axis.Z ? 0f : 1f);
-        final var transformation = new Transformation(translation, leftRotation, scale, rightRotation);
-        final var brightness = new BlockDisplay.Brightness(15, 15);
-        for (var square : legalTargets) {
-            final var cuboid = squares.get(square);
+        final Vector3f translation = new Vector3f((float) Math.abs(faceBoardX.getModX() + faceBoardY.getModX()) * -0.5f,
+                                                  (float) Math.abs(faceBoardX.getModY() + faceBoardY.getModY()) * -0.5f,
+                                                  (float) Math.abs(faceBoardX.getModZ() + faceBoardY.getModZ()) * -0.5f);
+        final AxisAngle4f leftRotation = AXISANGLE4F_ZERO;
+        final AxisAngle4f rightRotation = AXISANGLE4F_ZERO;
+        final Vector3f scale = new Vector3f(facingAxis == Axis.X ? 0f : 1f,
+                                            facingAxis == Axis.Y ? 0f : 1f,
+                                            facingAxis == Axis.Z ? 0f : 1f);
+        final Transformation transformation = new Transformation(translation, leftRotation, scale, rightRotation);
+        final BlockDisplay.Brightness brightness = new BlockDisplay.Brightness(15, 15);
+        for (ChessSquare square : legalTargets) {
+            final Cuboid cuboid = squares.get(square);
             for (int dy = 0; dy < lengthBoardY; dy += 1) {
                 for (int dx = 0; dx < lengthBoardX; dx += 1) {
                     final int up = lengthBoardOrtho - 1;
                     final int x = cuboid.ax + Math.abs(dx * faceBoardX.getModX() + dy * faceBoardY.getModX() + up * faceBoardOrtho.getModX());
                     final int y = cuboid.ay + Math.abs(dx * faceBoardX.getModY() + dy * faceBoardY.getModY() + up * faceBoardOrtho.getModY());
                     final int z = cuboid.az + Math.abs(dx * faceBoardX.getModZ() + dy * faceBoardY.getModZ() + up * faceBoardOrtho.getModZ());
-                    final var block = world.getBlockAt(x, y, z);
-                    final var blockData = block.getBlockData();
-                    final var location = block.getLocation()
+                    final Block block = world.getBlockAt(x, y, z);
+                    final BlockData blockData = block.getBlockData();
+                    final Location location = block.getLocation()
                         .add(0.5, 0.5, 0.5)
                         .add(faceBoardOrtho.getDirection().multiply(0.5078125));
                     boolean willTake = game.getCurrentBoard().getPieceAt(square) != null;
-                    final var display = world.spawn(location, BlockDisplay.class, e -> {
+                    final BlockDisplay display = world.spawn(location, BlockDisplay.class, e -> {
                             e.setPersistent(false);
                             setTransient(e);
                             e.setBlock(blockData);
@@ -705,7 +714,7 @@ public final class WorldChessBoard {
     private void clearLegalMoves() {
         moveFrom = null;
         legalTargets.clear();
-        for (var it : highlights) it.remove();
+        for (BlockDisplay it : highlights) it.remove();
         highlights.clear();
     }
 
@@ -746,7 +755,7 @@ public final class WorldChessBoard {
         }
         saveTag.getPlayer(color).setPlayer(saveTag.getQueue().get(0));
         saveTag.getPlayer(color.other()).setPlayer(saveTag.getQueue().get(1));
-        for (var p : saveTag.getPlayers()) {
+        for (ChessSaveTag.ChessPlayer p : saveTag.getPlayers()) {
             p.setTimeBank(saveTag.getTimeBank());
             p.setTimeIncrement(saveTag.getTimeIncrement());
         }
@@ -760,11 +769,11 @@ public final class WorldChessBoard {
         save();
         clearPieces();
         spawnAllPieces();
-        final Player white = saveTag.getWhite().getPlayer();
+        final Player white = saveTag.getWhite().getPlayerEntity();
         if (white != null) {
             white.sendMessage(textOfChildren(Mytems.WHITE_QUEEN, text("You play as White", GRAY)));
         }
-        final Player black = saveTag.getBlack().getPlayer();
+        final Player black = saveTag.getBlack().getPlayerEntity();
         if (black != null) {
             black.sendMessage(textOfChildren(Mytems.BLACK_QUEEN, text("You play as Black", DARK_GRAY)));
         }
@@ -784,7 +793,7 @@ public final class WorldChessBoard {
         saveTag.getPlayer(color).setPlayer(player);
         saveTag.getPlayer(color.other()).setChessEngineType(type);
         callback.accept(saveTag.getPlayer(color.other()));
-        for (var p : saveTag.getPlayers()) {
+        for (ChessSaveTag.ChessPlayer p : saveTag.getPlayers()) {
             p.setTimeBank(saveTag.getTimeBank());
             p.setTimeIncrement(saveTag.getTimeIncrement());
         }
@@ -804,16 +813,16 @@ public final class WorldChessBoard {
     }
 
     public boolean move(ChessMove move) {
-        final var board = game.getCurrentBoard();
-        final var turnNumber = board.getFullMoveClock();
-        final var piece = board.getPieceAt(move.from());
-        var taken = board.getPieceAt(move.to());
-        final var color = board.getActiveColor();
-        final var player = saveTag.getPlayer(color);
-        final var moveText = game.getCurrentTurn().getMoveText(move);
+        final ChessBoard board = game.getCurrentBoard();
+        final int turnNumber = board.getFullMoveClock();
+        final ChessPiece piece = board.getPieceAt(move.from());
+        ChessPiece taken = board.getPieceAt(move.to());
+        final ChessColor color = board.getActiveColor();
+        final ChessSaveTag.ChessPlayer player = saveTag.getPlayer(color);
+        final String moveText = game.getCurrentTurn().getMoveText(move);
         if (!game.move(move)) return false;
         // Update the board
-        final var newBoard = game.getCurrentBoard();
+        final ChessBoard newBoard = game.getCurrentBoard();
         updateBoard(move, color);
         if (newBoard.getCastleMove() != null) {
             updateBoard(newBoard.getCastleMove(), color);
@@ -825,15 +834,15 @@ public final class WorldChessBoard {
         }
         if (newBoard.getEnPassantTaken() != null) {
             taken = ChessPiece.of(color.other(), ChessPieceType.PAWN);
-            final var old = pieces.remove(newBoard.getEnPassantTaken());
+            final WorldChessPiece old = pieces.remove(newBoard.getEnPassantTaken());
             if (old != null) {
                 old.explode();
                 old.remove();
             }
         }
         // Announce
-        final var newTurn = game.getCurrentTurn();
-        final var newState = newTurn.getState();
+        final ChessTurn newTurn = game.getCurrentTurn();
+        final ChessTurnState newState = newTurn.getState();
         announce(textOfChildren(text(player.getName(), GREEN),
                                 text(" plays ", GRAY),
                                 piece.getMytems(),
@@ -871,23 +880,23 @@ public final class WorldChessBoard {
     }
 
     private void updateBoard(ChessMove move, ChessColor color) {
-        final var takenPiece = pieces.remove(move.to());
+        final WorldChessPiece takenPiece = pieces.remove(move.to());
         if (takenPiece != null) {
             takenPiece.explode();
             takenPiece.remove();
         }
         if (move.promotion() == null) {
-            final var movedPiece = pieces.remove(move.from());
+            final WorldChessPiece movedPiece = pieces.remove(move.from());
             if (movedPiece != null) {
                 movedPiece.move(move.to());
                 pieces.put(move.to(), movedPiece);
             }
         } else {
-            final var movedPiece = pieces.remove(move.from());
+            final WorldChessPiece movedPiece = pieces.remove(move.from());
             if (movedPiece != null) {
                 movedPiece.remove();
-                final var newPiece = ChessPiece.of(color, move.promotion());
-                final var placed = getPieceSet().place(this, move.to(), newPiece);
+                final ChessPiece newPiece = ChessPiece.of(color, move.promotion());
+                final WorldChessPiece placed = getPieceSet().place(this, move.to(), newPiece);
                 if (placed != null) pieces.put(move.to(), placed);
             }
         }
@@ -895,8 +904,8 @@ public final class WorldChessBoard {
 
     private void onGameOver() {
         plugin().getLogger().info(getBoardId() + "\n" + game.toPgnString());
-        final var turn = game.getCurrentTurn();
-        final var winner = turn.getWinner();
+        final ChessTurn turn = game.getCurrentTurn();
+        final ChessColor winner = turn.getWinner();
         switch (turn.getState()) {
         case CHECKMATE:
             announce(text(saveTag.getPlayer(winner).getName() + " (" + winner.getHumanName() + ") wins by checkmate!", GREEN));
@@ -950,7 +959,7 @@ public final class WorldChessBoard {
             plugin().getDatabase().insertAsync(row, i -> plugin().getLogger().info("Game saved with id " + row.getId()));
         }
         if (winner != null && saveTag.getPlayer(winner).isPlayer() && saveTag.getPlayer(winner.other()).isStockfish()) {
-            final var player = saveTag.getPlayer(winner).getPlayer();
+            final Player player = saveTag.getPlayer(winner).getPlayerEntity();
             if (player != null) {
                 Mytems.KITTY_COIN.giveItemStack(player, 1 + saveTag.getPlayer(winner.other()).getStockfishLevel() / 3);
             }
@@ -963,25 +972,25 @@ public final class WorldChessBoard {
     private void updateBossBar() {
         final List<ComponentLike> bossBarText = new ArrayList<>();
         float progress = 1f;
-        final var whitePieceCount = game.getCurrentBoard().countPieces(ChessColor.WHITE);
-        final var blackPieceCount = game.getCurrentBoard().countPieces(ChessColor.BLACK);
+        final Map<ChessPieceType, Integer> whitePieceCount = game.getCurrentBoard().countPieces(ChessColor.WHITE);
+        final Map<ChessPieceType, Integer> blackPieceCount = game.getCurrentBoard().countPieces(ChessColor.BLACK);
         int whiteScore = 0;
         int blackScore = 0;
-        for (var entry : whitePieceCount.entrySet()) {
+        for (Map.Entry<ChessPieceType, Integer> entry : whitePieceCount.entrySet()) {
             whiteScore += entry.getKey().getValue() * entry.getValue();
         }
-        for (var entry : blackPieceCount.entrySet()) {
+        for (Map.Entry<ChessPieceType, Integer> entry : blackPieceCount.entrySet()) {
             blackScore += entry.getKey().getValue() * entry.getValue();
         }
-        for (var color : ChessColor.values()) {
+        for (ChessColor color : ChessColor.values()) {
             if (color == ChessColor.BLACK) {
                 bossBarText.add(text(" | ", DARK_GRAY));
             }
-            final var player = saveTag.getPlayer(color);
+            final ChessSaveTag.ChessPlayer player = saveTag.getPlayer(color);
             final int seconds = Math.max(0, player.getTimeBankSeconds());
             final int minutes = seconds / 60;
             final boolean playing = player.isPlaying();
-            final var textColor = player.getAwaySince() != 0L
+            final TextColor textColor = player.getAwaySince() != 0L
                 ? DARK_RED
                 : (color == ChessColor.WHITE
                    ? GRAY
@@ -1000,7 +1009,7 @@ public final class WorldChessBoard {
                     bossBarText.add(space());
                     bossBarText.add(text(Unicode.superscript("+" + (whiteScore - blackScore)), textColor));
                 }
-                for (var type : ChessPieceType.values()) {
+                for (ChessPieceType type : ChessPieceType.values()) {
                     final int has = blackPieceCount.getOrDefault(type, 0);
                     final int missing = type.getInitialAmount() - has;
                     if (missing == 0) continue;
@@ -1010,9 +1019,9 @@ public final class WorldChessBoard {
                     }
                 }
             } else {
-                final var types = ChessPieceType.values();
+                final ChessPieceType[] types = ChessPieceType.values();
                 for (int j = types.length - 1; j >= 0; j -= 1) {
-                    final var type = types[j];
+                    final ChessPieceType type = types[j];
                     final int has = whitePieceCount.getOrDefault(type, 0);
                     final int missing = type.getInitialAmount() - has;
                     if (missing == 0) continue;
@@ -1047,7 +1056,7 @@ public final class WorldChessBoard {
     private void showPreviousMove() {
         final ChessMove move = game.getCurrentTurn().getPreviousMove();
         if (move == null) return;
-        final var up = faceBoardOrtho.getDirection().multiply(0.125);
+        final Vector up = faceBoardOrtho.getDirection().multiply(0.125);
         final Location from = getCenterLocation(move.from()).add(up);
         final Location to = getCenterLocation(move.to()).add(up);
         final double d = from.distance(to);
@@ -1065,7 +1074,7 @@ public final class WorldChessBoard {
 
     private void clickResignMenu(Player player, ChessColor color) {
         final int size = 9;
-        final var builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
+        final GuiOverlay.Builder builder = GuiOverlay.BLANK.builder(9, DARK_GRAY)
             .title(text("End the Game?", WHITE));
         final Gui gui = new Gui().size(size).title(builder.build());
         gui.setItem(2, tooltip(Mytems.REDO.createItemStack(), List.of(text((drawOffered == color.other() ? "Agree to Draw" : "Offer Draw"), GREEN))), click -> {
