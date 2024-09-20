@@ -71,8 +71,8 @@ public final class ChessSaveTag implements Serializable {
 
     public MinigameMatchCompleteEvent callMinigameEvent(ChessColor winner) {
         if (state != ChessState.GAME) return null;
-        if (!getPlayer(ChessColor.WHITE).isPlayer() && getPlayer(ChessColor.BLACK).isPlayer()) return null;
-        MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.CHESS);
+        if (!white.isPlayer() && !black.isPlayer()) return null;
+        final MinigameMatchCompleteEvent event = new MinigameMatchCompleteEvent(MinigameMatchType.CHESS);
         if (white.isPlayer()) event.addPlayerUuid(white.getPlayerUuid());
         if (black.isPlayer()) event.addPlayerUuid(black.getPlayerUuid());
         if (winner != null && getPlayer(winner).isPlayer()) {
