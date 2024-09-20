@@ -12,7 +12,6 @@ import com.cavetale.chess.board.ChessPieceType;
 import com.cavetale.chess.board.ChessSquare;
 import com.cavetale.chess.board.ChessTurn;
 import com.cavetale.chess.board.ChessTurnState;
-import com.cavetale.chess.board.ChessTurnState;
 import com.cavetale.chess.net.LichessImport;
 import com.cavetale.chess.sql.SQLChessGame;
 import com.cavetale.core.event.hud.PlayerHudEvent;
