@@ -64,7 +64,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
                     z.getEquipment().setChestplate(leatherArmor(Material.LEATHER_CHESTPLATE, leatherColor));
                     z.getEquipment().setLeggings(leatherArmor(Material.LEATHER_LEGGINGS, leatherColor));
                     z.getEquipment().setBoots(leatherArmor(Material.LEATHER_BOOTS, leatherColor));
-                    z.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale * 1.5);
+                    z.getAttribute(Attribute.SCALE).setBaseValue(scale * 1.5);
                 });
             yield new DefaultPiece(piece, zombie, board);
         }
@@ -76,12 +76,12 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
                                : Horse.Color.BLACK);
                     h.setStyle(Horse.Style.NONE);
                     h.getInventory().setArmor(leatherArmor(Material.LEATHER_HORSE_ARMOR, leatherColor));
-                    h.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale);
+                    h.getAttribute(Attribute.SCALE).setBaseValue(scale);
                 });
             final AbstractSkeleton rider = piece.color == ChessColor.WHITE
                 ? spawnSkeleton(location)
                 : spawnWitherSkeleton(location);
-            rider.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale);
+            rider.getAttribute(Attribute.SCALE).setBaseValue(scale);
             Worlds.worlds().setAllowVehicleEnter(true);
             horse.addPassenger(rider);
             Worlds.worlds().setAllowVehicleEnter(false);
@@ -105,7 +105,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
             final AbstractSkeleton skeleton = piece.color == ChessColor.WHITE
                 ? spawnSkeleton(location)
                 : spawnWitherSkeleton(location);
-            skeleton.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale);
+            skeleton.getAttribute(Attribute.SCALE).setBaseValue(scale);
             skeleton.getEquipment().setHelmet(piece.color == ChessColor.WHITE
                                               ? Mytems.WHITE_WITCH_HAT.createItemStack()
                                               : Mytems.BLACK_WITCH_HAT.createItemStack());
@@ -116,12 +116,12 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
             final LivingEntity entity = piece.color == ChessColor.WHITE
                 ? spawnPolarBear(location)
                 : spawnPanda(location);
-            entity.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale * 1.25);
+            entity.getAttribute(Attribute.SCALE).setBaseValue(scale * 1.25);
             yield new DefaultPiece(piece, entity, board);
         }
         case QUEEN -> {
             final var armorStand = spawnArmorStand(location, leatherColor);
-            armorStand.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale);
+            armorStand.getAttribute(Attribute.SCALE).setBaseValue(scale);
             armorStand.getEquipment().setItemInMainHand(piece.color == ChessColor.WHITE
                                                         ? Mytems.ICE_STAFF.createItemStack()
                                                         : Mytems.DR_ACULA_STAFF.createItemStack());
@@ -135,13 +135,13 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
             final LivingEntity entity = piece.color == ChessColor.WHITE
                 ? location.getWorld().spawn(location, IronGolem.class, false, e -> {
                         applyEntity(e);
-                        e.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale);
+                        e.getAttribute(Attribute.SCALE).setBaseValue(scale);
                     })
                 : location.getWorld().spawn(location, Warden.class, false, e -> {
                         applyEntity(e);
-                        e.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale);
+                        e.getAttribute(Attribute.SCALE).setBaseValue(scale);
                     });
-            entity.getAttribute(Attribute.GENERIC_SCALE).setBaseValue(scale);
+            entity.getAttribute(Attribute.SCALE).setBaseValue(scale);
             yield new DefaultPiece(piece, entity, board);
         }
         default -> throw new IllegalStateException("piece.type=" + piece.type);
