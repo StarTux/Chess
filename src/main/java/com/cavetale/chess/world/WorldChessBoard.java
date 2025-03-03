@@ -963,7 +963,9 @@ public final class WorldChessBoard {
                 Mytems.KITTY_COIN.giveItemStack(player, 1 + saveTag.getPlayer(winner.other()).getStockfishLevel() / 3);
             }
         }
-        saveTag.callMinigameEvent(winner);
+        if (game.getMoveCount() >= 3) {
+            saveTag.callMinigameEvent(winner);
+        }
         saveTag.setState(ChessSaveTag.ChessState.WAITING);
         cpuRequestScheduled = false;
     }
