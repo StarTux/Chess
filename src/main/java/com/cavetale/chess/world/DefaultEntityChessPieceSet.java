@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import net.kyori.adventure.util.TriState;
 import org.bukkit.Axis;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -59,6 +60,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
             final Zombie zombie = location.getWorld().spawn(location, Zombie.class, false, z -> {
                     applyEntity(z);
                     z.setShouldBurnInDay(false);
+                    z.setVisualFire(TriState.FALSE);
                     z.setBaby();
                     z.getEquipment().setHelmet(leatherArmor(Material.LEATHER_HELMET, leatherColor));
                     z.getEquipment().setChestplate(leatherArmor(Material.LEATHER_CHESTPLATE, leatherColor));
@@ -195,6 +197,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
         return location.getWorld().spawn(location, Skeleton.class, false, s -> {
                 applyEntity(s);
                 s.setShouldBurnInDay(false);
+                s.setVisualFire(TriState.FALSE);
                 s.getEquipment().setHelmet(null);
                 s.getEquipment().setChestplate(null);
                 s.getEquipment().setLeggings(null);
@@ -208,6 +211,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
         return location.getWorld().spawn(location, WitherSkeleton.class, false, s -> {
                 applyEntity(s);
                 s.setShouldBurnInDay(false);
+                s.setVisualFire(TriState.FALSE);
                 s.getEquipment().setHelmet(null);
                 s.getEquipment().setChestplate(null);
                 s.getEquipment().setLeggings(null);
