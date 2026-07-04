@@ -183,6 +183,7 @@ public final class DefaultEntityChessPieceSet implements ChessPieceSet {
     private static ItemStack leatherArmor(Material material, Color color) {
         ItemStack result = new ItemStack(material);
         result.editMeta(m -> {
+                m.setUnbreakable(true);
                 if (!(m instanceof LeatherArmorMeta meta)) return;
                 meta.setColor(color);
             });
